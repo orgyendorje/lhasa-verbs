@@ -1,0 +1,10 @@
+# Exclude original desktop app files (not needed for web)
+Tibetan Lhasa Verbs/*.spl
+Tibetan Lhasa Verbs/*.dat
+Tibetan Lhasa Verbs/*.exe
+Tibetan Lhasa Verbs/*.inf
+Tibetan Lhasa Verbs/*.rtf
+Tibetan Lhasa Verbs/*.html
+Learning tools from Damien/
+.DS_Store
+deploy-to-github.sh
