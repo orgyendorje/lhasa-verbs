@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Lhasa Verbs">
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="description" content="Learn Tibetan Lhasa verbs with an interactive dictionary and flashcard system">
 
@@ -1590,9 +1590,16 @@
 
             // --- FRONT: Tibetan verb + audio button ---
             const tibAudioPath = getAudioPath(verb.refId, 'tibetan');
+            const verbTimings = AUDIO_TIMINGS[String(verb.refId)];
+            let frontAudioOnclick;
+            if (verbTimings && verbTimings.verb) {
+                frontAudioOnclick = `event.stopPropagation(); playAudioSegment('${tibAudioPath}', ${verbTimings.verb.tibStart}, ${verbTimings.verb.tibEnd}, this)`;
+            } else {
+                frontAudioOnclick = `event.stopPropagation(); playAudio('${tibAudioPath}', this)`;
+            }
             document.getElementById('flashcard-front').innerHTML = `
                 <div class="flashcard-tibetan">${verb.verb}</div>
-                <button class="flashcard-audio-btn" onclick="event.stopPropagation(); playAudio('${tibAudioPath}', this)">
+                <button class="flashcard-audio-btn" onclick="${frontAudioOnclick}">
                     &#9654; Listen
                 </button>
                 <div class="flashcard-tap-hint">Tap card to reveal meaning</div>
@@ -1666,7 +1673,7 @@
                 ${examplesHtml}
                 ${notesHtml}
                 <div class="flashcard-back-audio">
-                    <button class="flashcard-back-audio-btn" data-label="Tibetan" onclick="event.stopPropagation(); playAudio('${tibAudioPath}', this)">&#9654; Tibetan</button>
+                    <button class="flashcard-back-audio-btn" data-label="Tibetan" onclick="event.stopPropagation(); ${verbTimings && verbTimings.verb ? `playAudioSegment('${tibAudioPath}', ${verbTimings.verb.tibStart}, ${verbTimings.verb.tibEnd}, this)` : `playAudio('${tibAudioPath}', this)`}">&#9654; Tibetan</button>
                     <button class="flashcard-back-audio-btn" data-label="English" onclick="event.stopPropagation(); playAudio('${engAudioPath}', this)">&#9654; English</button>
                 </div>
             `;
