@@ -1,10 +1,12 @@
-const CACHE_NAME = 'lhasa-verbs-v1';
-const AUDIO_CACHE = 'lhasa-verbs-audio-v1';
+const CACHE_NAME = 'lhasa-verbs-v2';
+const AUDIO_CACHE = 'lhasa-verbs-audio-v2';
 
 // Core files to precache (the app shell)
 const PRECACHE_URLS = [
   './LhasaVerbs.html',
   './manifest.json',
+  './data/colloquial.json',
+  './data/classical.json',
   'https://fonts.googleapis.com/css2?family=Noto+Sans+Tibetan:wght@400;500;700&family=Noto+Sans:wght@400;500;700&display=swap'
 ];
 
@@ -35,7 +37,10 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
   // Audio files: cache-on-demand strategy (too large to precache)
-  if (url.pathname.includes('Tibetan Lhasa Verbs/') || url.pathname.endsWith('.mp3')) {
+  // Covers Lhasa verbs audio AND colloquial Tibetan audio
+  if (url.pathname.includes('Tibetan Lhasa Verbs/') ||
+      url.pathname.includes('Learning tools from Damien/') ||
+      url.pathname.endsWith('.mp3')) {
     event.respondWith(
       caches.open(AUDIO_CACHE).then(cache =>
         cache.match(event.request).then(cached => {

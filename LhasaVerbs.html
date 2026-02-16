@@ -70,6 +70,35 @@
             background-clip: text;
         }
 
+        .dataset-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .dataset-tab {
+            padding: 0.6rem 1.2rem;
+            background: var(--bg-tertiary);
+            border: 2px solid transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .dataset-tab:hover {
+            color: var(--text-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .dataset-tab.active {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+            border-color: var(--accent-primary);
+        }
+
         .mode-tabs {
             display: flex;
             gap: 0.5rem;
@@ -882,6 +911,21 @@
                 font-size: 1.5rem;
             }
 
+            .dataset-tabs {
+                gap: 0.3rem;
+                flex-wrap: wrap;
+            }
+
+            .dataset-tab {
+                padding: 0.5rem 0.9rem;
+                font-size: 0.85rem;
+                min-height: 44px;
+                display: inline-flex;
+                align-items: center;
+                flex: 1;
+                justify-content: center;
+            }
+
             .mode-tabs {
                 gap: 0;
             }
@@ -1001,6 +1045,17 @@
                 font-size: 1.2rem;
             }
 
+            .dataset-tabs {
+                gap: 0.25rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .dataset-tab {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.8rem;
+                border-radius: 6px;
+            }
+
             .flashcard-tibetan {
                 font-size: 1.8rem;
             }
@@ -1076,7 +1131,12 @@
 <body>
     <header>
         <div class="header-content">
-            <h1>ལྷ་ས་ཚིག་མཛོད། Lhasa Verbs</h1>
+            <h1>བོད་ཚིག་མཛོད། Tibetan Learning</h1>
+            <div class="dataset-tabs">
+                <button class="dataset-tab active" data-dataset="lhasa">Lhasa Verbs</button>
+                <button class="dataset-tab" data-dataset="colloquial">Colloquial</button>
+                <button class="dataset-tab" data-dataset="classical">Classical</button>
+            </div>
             <div class="mode-tabs">
                 <button class="tab-button active" data-mode="dictionary">Dictionary</button>
                 <button class="tab-button" data-mode="flashcard">Flashcards</button>
@@ -1249,6 +1309,7 @@
         // State Management
         // ============================================
         let currentMode = 'dictionary';
+        let currentDataset = 'lhasa';
         let selectedVerbId = null;
         let filteredVerbs = [];
         let currentFilters = {
@@ -1256,8 +1317,15 @@
             argumentTypes: new Set(),
             volitionality: new Set(),
             hasAudio: new Set(),
-            letters: new Set()
+            letters: new Set(),
+            category: new Set(),
+            theme1: new Set(),
+            subtopic: new Set()
         };
+
+        // Dataset data
+        let COLLOQUIAL_DATA = null;
+        let CLASSICAL_DATA = null;
 
         // Flashcard state
         let flashcardSession = null;
@@ -1286,15 +1354,45 @@
         }
 
         // ============================================
+        // Data Loading
+        // ============================================
+        async function loadDatasets() {
+            try {
+                const colloquialResponse = await fetch('data/colloquial.json');
+                COLLOQUIAL_DATA = await colloquialResponse.json();
+                
+                const classicalResponse = await fetch('data/classical.json');
+                CLASSICAL_DATA = await classicalResponse.json();
+                
+                console.log('Datasets loaded successfully');
+            } catch (error) {
+                console.error('Error loading datasets:', error);
+            }
+        }
+
+                // ============================================
         // Dictionary Mode Functions
         // ============================================
         function initializeDictionary() {
+            // Clear filters for new dataset
+            document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('active'));
+            
             renderFilters();
             renderVerbList();
             updateStats();
         }
 
         function renderFilters() {
+            if (currentDataset === 'lhasa') {
+                renderFiltersLhasa();
+            } else if (currentDataset === 'colloquial') {
+                renderFiltersColloquial();
+            } else if (currentDataset === 'classical') {
+                renderFiltersClassical();
+            }
+        }
+
+        function renderFiltersLhasa() {
             // Argument types
             const argumentTypes = [...new Set(VERB_DATA.map(v => v.argumentType))];
             const argContainer = document.getElementById('argument-type-filters');
@@ -1330,6 +1428,56 @@
             });
         }
 
+        function renderFiltersColloquial() {
+            // Category filter
+            const categories = [...new Set(COLLOQUIAL_DATA.words.map(w => w.category))].sort();
+            const argContainer = document.getElementById('argument-type-filters');
+            argContainer.innerHTML = categories.map(cat =>
+                `<button class="filter-chip" data-filter="category" data-value="${cat}">${cat}</button>`
+            ).join('');
+
+            // Theme1 filter
+            const themes = [...new Set(COLLOQUIAL_DATA.words.map(w => w.theme1).filter(t => t))].sort();
+            const volContainer = document.getElementById('volitionality-filters');
+            volContainer.innerHTML = themes.map(theme =>
+                `<button class="filter-chip" data-filter="theme1" data-value="${theme}">${theme}</button>`
+            ).join('');
+
+            // Audio filter
+            const audioContainer = document.getElementById('audio-filters');
+            audioContainer.innerHTML = `
+                <button class="filter-chip" data-filter="hasAudio" data-value="yes">Has Audio</button>
+                <button class="filter-chip" data-filter="hasAudio" data-value="no">No Audio</button>
+            `;
+
+            // Clear letter filters for colloquial
+            document.getElementById('letter-filters').innerHTML = '';
+
+            // Add event listeners
+            document.querySelectorAll('.filter-chip').forEach(chip => {
+                chip.addEventListener('click', handleFilterClick);
+            });
+        }
+
+        function renderFiltersClassical() {
+            // Subtopic filter
+            const subtopics = [...new Set(CLASSICAL_DATA.entries.map(e => e.subtopic))].sort();
+            const argContainer = document.getElementById('argument-type-filters');
+            argContainer.innerHTML = subtopics.map(sub =>
+                `<button class="filter-chip" data-filter="subtopic" data-value="${sub}">${sub}</button>`
+            ).join('');
+
+            // Clear other filters for classical
+            document.getElementById('volitionality-filters').innerHTML = '';
+            document.getElementById('audio-filters').innerHTML = '';
+            document.getElementById('letter-filters').innerHTML = '';
+
+            // Add event listeners
+            document.querySelectorAll('.filter-chip').forEach(chip => {
+                chip.addEventListener('click', handleFilterClick);
+            });
+        }
+
         function handleFilterClick(e) {
             const filterType = e.target.dataset.filter;
             const value = e.target.dataset.value;
@@ -1350,6 +1498,18 @@
                 currentFilters.letters.has(value)
                     ? currentFilters.letters.delete(value)
                     : currentFilters.letters.add(value);
+            } else if (filterType === 'category') {
+                currentFilters.category.has(value)
+                    ? currentFilters.category.delete(value)
+                    : currentFilters.category.add(value);
+            } else if (filterType === 'theme1') {
+                currentFilters.theme1.has(value)
+                    ? currentFilters.theme1.delete(value)
+                    : currentFilters.theme1.add(value);
+            } else if (filterType === 'subtopic') {
+                currentFilters.subtopic.has(value)
+                    ? currentFilters.subtopic.delete(value)
+                    : currentFilters.subtopic.add(value);
             }
 
             e.target.classList.toggle('active');
@@ -1357,6 +1517,18 @@
         }
 
         function applyFilters() {
+            if (currentDataset === 'lhasa') {
+                applyFiltersLhasa();
+            } else if (currentDataset === 'colloquial') {
+                applyFiltersColloquial();
+            } else if (currentDataset === 'classical') {
+                applyFiltersClassical();
+            }
+            renderVerbList();
+            updateStats();
+        }
+
+        function applyFiltersLhasa() {
             filteredVerbs = VERB_DATA.filter(verb => {
                 // Search filter
                 if (currentFilters.search) {
@@ -1400,9 +1572,58 @@
 
                 return true;
             });
+        }
 
-            renderVerbList();
-            updateStats();
+        function applyFiltersColloquial() {
+            filteredVerbs = COLLOQUIAL_DATA.words.filter(word => {
+                // Search filter
+                if (currentFilters.search) {
+                    const search = currentFilters.search.toLowerCase();
+                    const matchesTibetan = word.tibetan.toLowerCase().includes(search);
+                    const matchesEnglish = word.english.toLowerCase().includes(search) ||
+                        word.sentence?.toLowerCase().includes(search) ||
+                        word.translation?.toLowerCase().includes(search);
+                    if (!matchesTibetan && !matchesEnglish) return false;
+                }
+
+                // Category filter
+                if (currentFilters.category.size > 0) {
+                    if (!currentFilters.category.has(word.category)) return false;
+                }
+
+                // Theme1 filter
+                if (currentFilters.theme1.size > 0) {
+                    if (!currentFilters.theme1.has(word.theme1)) return false;
+                }
+
+                // Audio filter
+                if (currentFilters.hasAudio.size > 0) {
+                    if (currentFilters.hasAudio.has('yes') && !word.hasAudio) return false;
+                    if (currentFilters.hasAudio.has('no') && word.hasAudio) return false;
+                }
+
+                return true;
+            });
+        }
+
+        function applyFiltersClassical() {
+            filteredVerbs = CLASSICAL_DATA.entries.filter(entry => {
+                // Search filter
+                if (currentFilters.search) {
+                    const search = currentFilters.search.toLowerCase();
+                    const matchesTibetan = entry.tibetan.toLowerCase().includes(search);
+                    const matchesEnglish = entry.english.toLowerCase().includes(search) ||
+                        entry.notes?.toLowerCase().includes(search);
+                    if (!matchesTibetan && !matchesEnglish) return false;
+                }
+
+                // Subtopic filter
+                if (currentFilters.subtopic.size > 0) {
+                    if (!currentFilters.subtopic.has(entry.subtopic)) return false;
+                }
+
+                return true;
+            });
         }
 
         function handleSearch(e) {
@@ -1416,29 +1637,66 @@
             const container = document.getElementById('verb-list');
 
             if (filteredVerbs.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>No verbs match your search</p></div>';
+                container.innerHTML = '<div class="empty-state"><p>No words match your search</p></div>';
                 return;
             }
 
-            container.innerHTML = filteredVerbs.map(verb => `
-                <div class="verb-card ${selectedVerbId === verb.refId ? 'selected' : ''}" data-id="${verb.refId}">
-                    <div class="verb-card-tibetan">${verb.verb}</div>
-                    <div class="verb-card-english">${verb.englishGloss[0]}</div>
-                </div>
-            `).join('');
-
-            container.querySelectorAll('.verb-card').forEach(card => {
-                card.addEventListener('click', () => selectVerb(parseInt(card.dataset.id)));
-            });
+            if (currentDataset === 'lhasa') {
+                container.innerHTML = filteredVerbs.map(verb => `
+                    <div class="verb-card ${selectedVerbId === verb.refId ? 'selected' : ''}" data-id="${verb.refId}">
+                        <div class="verb-card-tibetan">${verb.verb}</div>
+                        <div class="verb-card-english">${verb.englishGloss[0]}</div>
+                    </div>
+                `).join('');
+                container.querySelectorAll('.verb-card').forEach(card => {
+                    card.addEventListener('click', () => selectVerb(parseInt(card.dataset.id)));
+                });
+            } else if (currentDataset === 'colloquial') {
+                container.innerHTML = filteredVerbs.map(word => `
+                    <div class="verb-card ${selectedVerbId === word.id ? 'selected' : ''}" data-id="${word.id}">
+                        <div class="verb-card-tibetan">${word.tibetan}</div>
+                        <div class="verb-card-english">${word.english}</div>
+                        <span class="category-tag" style="font-size: 0.75rem; margin-top: 0.25rem;">${word.category}</span>
+                    </div>
+                `).join('');
+                container.querySelectorAll('.verb-card').forEach(card => {
+                    card.addEventListener('click', () => selectVerb(parseInt(card.dataset.id)));
+                });
+            } else if (currentDataset === 'classical') {
+                container.innerHTML = filteredVerbs.map(entry => `
+                    <div class="verb-card ${selectedVerbId === entry.id ? 'selected' : ''}" data-id="${entry.id}">
+                        <div class="verb-card-tibetan">${entry.tibetan}</div>
+                        <div class="verb-card-english">${entry.english.length > 100 ? entry.english.substring(0, 100) + '...' : entry.english}</div>
+                    </div>
+                `).join('');
+                container.querySelectorAll('.verb-card').forEach(card => {
+                    card.addEventListener('click', () => selectVerb(parseInt(card.dataset.id)));
+                });
+            }
         }
 
-        function selectVerb(refId) {
-            selectedVerbId = refId;
+        function selectVerb(id) {
+            selectedVerbId = id;
             renderVerbList();
             renderDetailPanel();
         }
 
         function renderDetailPanel() {
+            if (currentDataset === 'lhasa') {
+                renderDetailPanelLhasa();
+            } else if (currentDataset === 'colloquial') {
+                renderDetailPanelColloquial();
+            } else if (currentDataset === 'classical') {
+                renderDetailPanelClassical();
+            }
+        }
+
+        function playColloquialAudio(wordId, speed, btn) {
+            const audioPath = `Learning tools from Damien/colloquial/wordlists/recordings/sentence_${wordId}_${speed}.mp3`;
+            playAudio(audioPath, btn);
+        }
+
+                function renderDetailPanelLhasa() {
             const verb = VERB_DATA.find(v => v.refId === selectedVerbId);
             if (!verb) return;
 
@@ -1529,8 +1787,72 @@
             document.getElementById('detail-panel').innerHTML = html;
         }
 
+        function renderDetailPanelColloquial() {
+            const word = COLLOQUIAL_DATA.words.find(w => w.id === selectedVerbId);
+            if (!word) return;
+
+            const audioHtml = word.hasAudio ? `
+                <div style="margin-top: 1rem; margin-bottom: 1rem;">
+                    <button class="audio-button" data-label="Slow" onclick="playColloquialAudio(${word.id}, 'slow', this)">▶ Slow</button>
+                    <button class="audio-button" data-label="Fast" onclick="playColloquialAudio(${word.id}, 'fast', this)">▶ Fast</button>
+                </div>
+            ` : '';
+
+            const sentenceHtml = word.sentence ? `
+                <div class="section-title">Example Sentence</div>
+                <div class="example-tibetan">${word.sentence}</div>
+                <div class="example-english">${word.translation}</div>
+            ` : '';
+
+            const html = `
+                <div class="detail-tibetan-verb">${word.tibetan}</div>
+                <div class="badges-row">
+                    <span class="category-tag">${word.category}</span>
+                    <span class="category-tag">${word.theme1 || 'general'}</span>
+                    ${word.honorific ? '<span class="category-tag">honorific</span>' : ''}
+                </div>
+                <div class="section-title">English</div>
+                <p>${word.english}</p>
+                ${audioHtml}
+                ${sentenceHtml}
+            `;
+
+            document.getElementById('detail-panel').innerHTML = html;
+        }
+
+        function renderDetailPanelClassical() {
+            const entry = CLASSICAL_DATA.entries.find(e => e.id === selectedVerbId);
+            if (!entry) return;
+
+            const notesHtml = entry.notes ? `
+                <div class="section-title">Notes</div>
+                <div style="font-size: 0.9rem; line-height: 1.5;">${entry.notes}</div>
+            ` : '';
+
+            const html = `
+                <div class="detail-tibetan-verb">${entry.tibetan}</div>
+                <div class="badges-row">
+                    <span class="category-tag">${entry.subtopic}</span>
+                </div>
+                <div class="section-title">Definition</div>
+                <p>${entry.english}</p>
+                ${notesHtml}
+            `;
+
+            document.getElementById('detail-panel').innerHTML = html;
+        }
+
+        
         function updateStats() {
-            document.getElementById('total-verbs').textContent = VERB_DATA.length;
+            let total = 0;
+            if (currentDataset === 'lhasa') {
+                total = VERB_DATA.length;
+            } else if (currentDataset === 'colloquial' && COLLOQUIAL_DATA) {
+                total = COLLOQUIAL_DATA.words.length;
+            } else if (currentDataset === 'classical' && CLASSICAL_DATA) {
+                total = CLASSICAL_DATA.entries.length;
+            }
+            document.getElementById('total-verbs').textContent = total;
             document.getElementById('filtered-verbs').textContent = filteredVerbs.length;
         }
 
@@ -1538,13 +1860,47 @@
         // Flashcard Mode Functions
         // ============================================
         function initializeFlashcards() {
+            if (currentDataset === 'lhasa') {
+                initializeFlashcardsLhasa();
+            } else if (currentDataset === 'colloquial') {
+                initializeFlashcardsColloquial();
+            } else if (currentDataset === 'classical') {
+                initializeFlashcardsClassical();
+            }
+        }
+
+        function initializeFlashcardsLhasa() {
             const categories = [...new Set(VERB_DATA.flatMap(v => v.categories))].sort();
             const categorySelect = document.getElementById('category-filter');
             categorySelect.innerHTML = '<option value="">All Categories</option>' +
                 categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
         }
 
+        function initializeFlashcardsColloquial() {
+            const categories = [...new Set(COLLOQUIAL_DATA.words.map(w => w.category))].sort();
+            const categorySelect = document.getElementById('category-filter');
+            categorySelect.innerHTML = '<option value="">All Categories</option>' +
+                categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+        }
+
+        function initializeFlashcardsClassical() {
+            const subtopics = [...new Set(CLASSICAL_DATA.entries.map(e => e.subtopic))].sort();
+            const categorySelect = document.getElementById('category-filter');
+            categorySelect.innerHTML = '<option value="">All Subtopics</option>' +
+                subtopics.map(sub => `<option value="${sub}">${sub}</option>`).join('');
+        }
+
         function startFlashcardSession() {
+            if (currentDataset === 'lhasa') {
+                startFlashcardSessionLhasa();
+            } else if (currentDataset === 'colloquial') {
+                startFlashcardSessionColloquial();
+            } else if (currentDataset === 'classical') {
+                startFlashcardSessionClassical();
+            }
+        }
+
+        function startFlashcardSessionLhasa() {
             const sessionSize = document.getElementById('session-size').value;
             const categoryFilter = document.getElementById('category-filter').value;
 
@@ -1574,12 +1930,82 @@
             renderFlashcard();
         }
 
+        function startFlashcardSessionColloquial() {
+            const sessionSize = document.getElementById('session-size').value;
+            const categoryFilter = document.getElementById('category-filter').value;
+
+            let sessionWords = [...COLLOQUIAL_DATA.words];
+            if (categoryFilter) {
+                sessionWords = sessionWords.filter(w => w.category === categoryFilter);
+            }
+
+            // Shuffle
+            for (let i = sessionWords.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [sessionWords[i], sessionWords[j]] = [sessionWords[j], sessionWords[i]];
+            }
+
+            if (sessionSize !== 'all') {
+                sessionWords = sessionWords.slice(0, parseInt(sessionSize));
+            }
+
+            flashcardSession = { verbs: sessionWords };
+            cardAssessments.clear();
+            currentCardIndex = 0;
+            isCardFlipped = false;
+
+            document.querySelector('.flashcard-settings').style.display = 'none';
+            document.getElementById('flashcard-session').style.display = 'block';
+
+            renderFlashcard();
+        }
+
+        function startFlashcardSessionClassical() {
+            const sessionSize = document.getElementById('session-size').value;
+            const subtopicFilter = document.getElementById('category-filter').value;
+
+            let sessionEntries = [...CLASSICAL_DATA.entries];
+            if (subtopicFilter) {
+                sessionEntries = sessionEntries.filter(e => e.subtopic === subtopicFilter);
+            }
+
+            // Shuffle
+            for (let i = sessionEntries.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [sessionEntries[i], sessionEntries[j]] = [sessionEntries[j], sessionEntries[i]];
+            }
+
+            if (sessionSize !== 'all') {
+                sessionEntries = sessionEntries.slice(0, parseInt(sessionSize));
+            }
+
+            flashcardSession = { verbs: sessionEntries };
+            cardAssessments.clear();
+            currentCardIndex = 0;
+            isCardFlipped = false;
+
+            document.querySelector('.flashcard-settings').style.display = 'none';
+            document.getElementById('flashcard-session').style.display = 'block';
+
+            renderFlashcard();
+        }
+
         function renderFlashcard() {
             if (!flashcardSession || currentCardIndex >= flashcardSession.verbs.length) {
                 showSessionSummary();
                 return;
             }
 
+            if (currentDataset === 'lhasa') {
+                renderFlashcardLhasa();
+            } else if (currentDataset === 'colloquial') {
+                renderFlashcardColloquial();
+            } else if (currentDataset === 'classical') {
+                renderFlashcardClassical();
+            }
+        }
+
+        function renderFlashcardLhasa() {
             const verb = flashcardSession.verbs[currentCardIndex];
 
             // Update progress
@@ -1638,8 +2064,8 @@
                         let audioBtns = '';
                         if (sTiming) {
                             audioBtns = '<div class="example-audio-btns">'
-                                + '<button class="example-audio-btn" data-label="Tib" onclick="event.stopPropagation(); playAudioSegment(\'' + tibAudio + '\',' + sTiming.tibStart + ',' + sTiming.tibEnd + ', this)">&#9654; Tib</button>'
-                                + '<button class="example-audio-btn" data-label="Eng" onclick="event.stopPropagation(); playAudioSegment(\'' + engAudio + '\',' + sTiming.engStart + ',' + sTiming.engEnd + ', this)">&#9654; Eng</button>'
+                                + '<button class="example-audio-btn" data-label="Tib" onclick="event.stopPropagation(); playAudioSegment('' + tibAudio + '',' + sTiming.tibStart + ',' + sTiming.tibEnd + ', this)">&#9654; Tib</button>'
+                                + '<button class="example-audio-btn" data-label="Eng" onclick="event.stopPropagation(); playAudioSegment('' + engAudio + '',' + sTiming.engStart + ',' + sTiming.engEnd + ', this)">&#9654; Eng</button>'
                                 + '</div>';
                         }
                         return '<div class="flashcard-back-example-tib">' + ex.tibetan + '</div>'
@@ -1688,6 +2114,110 @@
             updateFlashcardButtons();
         }
 
+        function renderFlashcardColloquial() {
+            const word = flashcardSession.verbs[currentCardIndex];
+
+            // Update progress
+            document.getElementById('current-card').textContent = currentCardIndex + 1;
+            document.getElementById('total-cards').textContent = flashcardSession.verbs.length;
+            document.getElementById('progress-fill').style.width =
+                `${((currentCardIndex + 1) / flashcardSession.verbs.length) * 100}%`;
+
+            // --- FRONT: English word (speaking practice) ---
+            document.getElementById('flashcard-front').innerHTML = `
+                <div class="flashcard-english">${word.english}</div>
+                <div class="flashcard-tap-hint">Tap card to reveal Tibetan</div>
+            `;
+
+            // --- BACK: Tibetan + sentence + audio ---
+            const sentenceHtml = word.sentence ? `
+                <div class="flashcard-back-section">
+                    <div class="flashcard-back-label">Example</div>
+                    <div class="flashcard-back-example-tib">${word.sentence}</div>
+                    <div class="flashcard-back-example-eng">${word.translation}</div>
+                </div>
+            ` : '';
+
+            const audioHtml = word.hasAudio ? `
+                <div class="flashcard-back-audio">
+                    <button class="flashcard-back-audio-btn" data-label="Slow" onclick="event.stopPropagation(); playColloquialAudio(${word.id}, 'slow', this)">▶ Slow</button>
+                    <button class="flashcard-back-audio-btn" data-label="Fast" onclick="event.stopPropagation(); playColloquialAudio(${word.id}, 'fast', this)">▶ Fast</button>
+                </div>
+            ` : '';
+
+            document.getElementById('flashcard-back').innerHTML = `
+                <div class="flashcard-back-section">
+                    <div class="flashcard-back-label">Tibetan</div>
+                    <div class="flashcard-tibetan">${word.tibetan}</div>
+                </div>
+                <div class="flashcard-back-section">
+                    <div class="flashcard-back-label">Category</div>
+                    <div style="color: var(--text-secondary); font-size: 0.9rem;">
+                        ${word.category}${word.theme1 ? ' · ' + word.theme1 : ''}
+                    </div>
+                </div>
+                ${sentenceHtml}
+                ${audioHtml}
+            `;
+
+            // Apply flip state
+            const flashcardEl = document.getElementById('flashcard');
+            flashcardEl.classList.toggle('flipped', isCardFlipped);
+
+            // Show assessment buttons only when flipped
+            document.getElementById('assessment-buttons').style.display = isCardFlipped ? 'flex' : 'none';
+
+            updateFlashcardButtons();
+        }
+
+        function renderFlashcardClassical() {
+            const entry = flashcardSession.verbs[currentCardIndex];
+
+            // Update progress
+            document.getElementById('current-card').textContent = currentCardIndex + 1;
+            document.getElementById('total-cards').textContent = flashcardSession.verbs.length;
+            document.getElementById('progress-fill').style.width =
+                `${((currentCardIndex + 1) / flashcardSession.verbs.length) * 100}%`;
+
+            // --- FRONT: Tibetan term (recognition practice) ---
+            document.getElementById('flashcard-front').innerHTML = `
+                <div class="flashcard-tibetan">${entry.tibetan}</div>
+                <div class="flashcard-tap-hint">Tap card to reveal meaning</div>
+            `;
+
+            // --- BACK: English definition + notes ---
+            const notesHtml = entry.notes ? `
+                <div class="flashcard-back-section">
+                    <div class="flashcard-back-label">Notes</div>
+                    <div style="font-size: 0.85rem; line-height: 1.4;">${entry.notes}</div>
+                </div>
+            ` : '';
+
+            document.getElementById('flashcard-back').innerHTML = `
+                <div class="flashcard-back-section">
+                    <div class="flashcard-back-label">Definition</div>
+                    <div class="flashcard-back-english">${entry.english}</div>
+                </div>
+                <div class="flashcard-back-section">
+                    <div class="flashcard-back-label">Topic</div>
+                    <div style="color: var(--text-secondary); font-size: 0.9rem;">
+                        ${entry.subtopic}
+                    </div>
+                </div>
+                ${notesHtml}
+            `;
+
+            // Apply flip state
+            const flashcardEl = document.getElementById('flashcard');
+            flashcardEl.classList.toggle('flipped', isCardFlipped);
+
+            // Show assessment buttons only when flipped
+            document.getElementById('assessment-buttons').style.display = isCardFlipped ? 'flex' : 'none';
+
+            updateFlashcardButtons();
+        }
+
+        
         function updateFlashcardButtons() {
             document.getElementById('prev-btn').disabled = currentCardIndex === 0;
             document.getElementById('next-btn').disabled =
@@ -1706,13 +2236,15 @@
 
         function markCorrect() {
             const verb = flashcardSession.verbs[currentCardIndex];
-            cardAssessments.set(verb.refId, 'correct');
+            const verbId = verb.refId || verb.id;
+            cardAssessments.set(verbId, 'correct');
             nextCard();
         }
 
         function markNeedsPractice() {
             const verb = flashcardSession.verbs[currentCardIndex];
-            cardAssessments.set(verb.refId, 'needs_practice');
+            const verbId = verb.refId || verb.id;
+            cardAssessments.set(verbId, 'needs_practice');
             // Add card back to end of deck for review
             flashcardSession.verbs.push(verb);
             document.getElementById('total-cards').textContent = flashcardSession.verbs.length;
@@ -1864,6 +2396,57 @@
         }
 
         // ============================================
+        // Dataset Switching
+        // ============================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Load external datasets
+            await loadDatasets();
+            
+            // Setup dataset tab listeners
+            document.querySelectorAll('.dataset-tab').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    switchDataset(btn.dataset.dataset);
+                });
+            });
+        });
+
+        function switchDataset(dataset) {
+            currentDataset = dataset;
+            selectedVerbId = null;
+            filteredVerbs = [];
+            currentFilters = {
+                search: '',
+                argumentTypes: new Set(),
+                volitionality: new Set(),
+                hasAudio: new Set(),
+                letters: new Set(),
+                category: new Set(),
+                theme1: new Set(),
+                subtopic: new Set()
+            };
+            
+            // Update active tab
+            document.querySelectorAll('.dataset-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.dataset === dataset);
+            });
+            
+            // Reset to dictionary mode
+            currentMode = 'dictionary';
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === 'dictionary');
+            });
+            document.getElementById('dictionary-mode').classList.add('active');
+            document.getElementById('flashcard-mode').classList.remove('active');
+            
+            // Stop any playing audio
+            stopAudio();
+            
+            // Reinitialize for new dataset
+            initializeDictionary();
+            initializeFlashcards();
+        }
+
+                // ============================================
         // Mode Switching
         // ============================================
         document.querySelectorAll('.tab-button').forEach(btn => {
