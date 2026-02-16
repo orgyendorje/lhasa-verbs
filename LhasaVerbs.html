@@ -1376,10 +1376,13 @@
         function initializeDictionary() {
             // Clear filters for new dataset
             document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('active'));
-            
+
+            // Clear search input
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) searchInput.value = '';
+
             renderFilters();
-            renderVerbList();
-            updateStats();
+            applyFilters(); // This populates filteredVerbs, renders the list, and updates stats
         }
 
         function renderFilters() {
@@ -1429,6 +1432,7 @@
         }
 
         function renderFiltersColloquial() {
+            if (!COLLOQUIAL_DATA) return;
             // Category filter
             const categories = [...new Set(COLLOQUIAL_DATA.words.map(w => w.category))].sort();
             const argContainer = document.getElementById('argument-type-filters');
@@ -1460,6 +1464,7 @@
         }
 
         function renderFiltersClassical() {
+            if (!CLASSICAL_DATA) return;
             // Subtopic filter
             const subtopics = [...new Set(CLASSICAL_DATA.entries.map(e => e.subtopic))].sort();
             const argContainer = document.getElementById('argument-type-filters');
@@ -1575,6 +1580,7 @@
         }
 
         function applyFiltersColloquial() {
+            if (!COLLOQUIAL_DATA) { filteredVerbs = []; return; }
             filteredVerbs = COLLOQUIAL_DATA.words.filter(word => {
                 // Search filter
                 if (currentFilters.search) {
@@ -1607,6 +1613,7 @@
         }
 
         function applyFiltersClassical() {
+            if (!CLASSICAL_DATA) { filteredVerbs = []; return; }
             filteredVerbs = CLASSICAL_DATA.entries.filter(entry => {
                 // Search filter
                 if (currentFilters.search) {
@@ -1877,6 +1884,7 @@
         }
 
         function initializeFlashcardsColloquial() {
+            if (!COLLOQUIAL_DATA) return;
             const categories = [...new Set(COLLOQUIAL_DATA.words.map(w => w.category))].sort();
             const categorySelect = document.getElementById('category-filter');
             categorySelect.innerHTML = '<option value="">All Categories</option>' +
@@ -1884,6 +1892,7 @@
         }
 
         function initializeFlashcardsClassical() {
+            if (!CLASSICAL_DATA) return;
             const subtopics = [...new Set(CLASSICAL_DATA.entries.map(e => e.subtopic))].sort();
             const categorySelect = document.getElementById('category-filter');
             categorySelect.innerHTML = '<option value="">All Subtopics</option>' +
