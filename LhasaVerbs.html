@@ -1256,17 +1256,27 @@
         </div>
     </div>
 
-    <!-- Service Worker registration in separate script so it always runs -->
+    <!-- Service Worker: nuke old caches, then re-register fresh -->
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(function(reg) {
-                        console.log('Service Worker registered:', reg.scope);
-                        // Force update check
-                        reg.update();
-                    })
-                    .catch(function(err) { console.error('SW registration failed:', err); });
+            // Unregister ALL old service workers and wipe ALL caches
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+                var promises = [];
+                regs.forEach(function(reg) {
+                    promises.push(reg.unregister());
+                });
+                return Promise.all(promises);
+            }).then(function() {
+                return caches.keys();
+            }).then(function(names) {
+                return Promise.all(names.map(function(n) { return caches.delete(n); }));
+            }).then(function() {
+                // Now register the fresh SW
+                return navigator.serviceWorker.register('./sw.js');
+            }).then(function(reg) {
+                console.log('Fresh SW registered:', reg.scope);
+            }).catch(function(err) {
+                console.error('SW setup error:', err);
             });
         }
     </script>
