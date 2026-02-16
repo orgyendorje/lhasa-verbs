@@ -1256,27 +1256,14 @@
         </div>
     </div>
 
-    <!-- Service Worker: nuke old caches, then re-register fresh -->
+    <!-- Disable service worker: unregister old ones and clear caches -->
     <script>
         if ('serviceWorker' in navigator) {
-            // Unregister ALL old service workers and wipe ALL caches
             navigator.serviceWorker.getRegistrations().then(function(regs) {
-                var promises = [];
-                regs.forEach(function(reg) {
-                    promises.push(reg.unregister());
-                });
-                return Promise.all(promises);
-            }).then(function() {
-                return caches.keys();
-            }).then(function(names) {
-                return Promise.all(names.map(function(n) { return caches.delete(n); }));
-            }).then(function() {
-                // Now register the fresh SW
-                return navigator.serviceWorker.register('./sw.js');
-            }).then(function(reg) {
-                console.log('Fresh SW registered:', reg.scope);
-            }).catch(function(err) {
-                console.error('SW setup error:', err);
+                regs.forEach(function(reg) { reg.unregister(); });
+            });
+            caches.keys().then(function(names) {
+                names.forEach(function(n) { caches.delete(n); });
             });
         }
     </script>
