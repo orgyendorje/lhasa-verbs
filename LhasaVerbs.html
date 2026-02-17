@@ -2144,13 +2144,21 @@
             document.getElementById('progress-fill').style.width =
                 `${((currentCardIndex + 1) / flashcardSession.verbs.length) * 100}%`;
 
-            // --- FRONT: English word (speaking practice) ---
+            // --- FRONT: Tibetan word + audio ---
+            const frontAudioHtml = word.hasAudio ? `
+                <div class="flashcard-back-audio" style="margin-top: 1rem;">
+                    <button class="flashcard-back-audio-btn" data-label="Slow" onclick="event.stopPropagation(); playColloquialAudio(${word.id}, 'slow', this)">▶ Slow</button>
+                    <button class="flashcard-back-audio-btn" data-label="Fast" onclick="event.stopPropagation(); playColloquialAudio(${word.id}, 'fast', this)">▶ Fast</button>
+                </div>
+            ` : '';
+
             document.getElementById('flashcard-front').innerHTML = `
-                <div class="flashcard-english">${word.english}</div>
-                <div class="flashcard-tap-hint">Tap card to reveal Tibetan</div>
+                <div class="flashcard-tibetan">${word.tibetan}</div>
+                ${frontAudioHtml}
+                <div class="flashcard-tap-hint">Tap card to reveal English</div>
             `;
 
-            // --- BACK: Tibetan + sentence + audio ---
+            // --- BACK: English + category + sentence ---
             const sentenceHtml = word.sentence ? `
                 <div class="flashcard-back-section">
                     <div class="flashcard-back-label">Example</div>
@@ -2159,17 +2167,10 @@
                 </div>
             ` : '';
 
-            const audioHtml = word.hasAudio ? `
-                <div class="flashcard-back-audio">
-                    <button class="flashcard-back-audio-btn" data-label="Slow" onclick="event.stopPropagation(); playColloquialAudio(${word.id}, 'slow', this)">▶ Slow</button>
-                    <button class="flashcard-back-audio-btn" data-label="Fast" onclick="event.stopPropagation(); playColloquialAudio(${word.id}, 'fast', this)">▶ Fast</button>
-                </div>
-            ` : '';
-
             document.getElementById('flashcard-back').innerHTML = `
                 <div class="flashcard-back-section">
-                    <div class="flashcard-back-label">Tibetan</div>
-                    <div class="flashcard-tibetan">${word.tibetan}</div>
+                    <div class="flashcard-back-label">English</div>
+                    <div class="flashcard-english">${word.english}</div>
                 </div>
                 <div class="flashcard-back-section">
                     <div class="flashcard-back-label">Category</div>
@@ -2178,7 +2179,6 @@
                     </div>
                 </div>
                 ${sentenceHtml}
-                ${audioHtml}
             `;
 
             // Apply flip state
