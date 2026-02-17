@@ -1210,6 +1210,87 @@
             background: var(--bg-tertiary);
             color: var(--text-secondary);
         }
+    
+        /* Notification Settings */
+        .notification-banner {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: white;
+            border: 3px solid var(--accent-primary);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            max-width: 350px;
+            z-index: 1000;
+            animation: slideInUp 0.3s ease;
+        }
+
+        @keyframes slideInUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .notification-banner h3 {
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+        }
+
+        .notification-banner p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .notification-banner button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-right: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .notification-allow {
+            background: var(--accent-primary);
+            color: white;
+            box-shadow: 0 4px 0 #3d7680;
+        }
+
+        .notification-allow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 #3d7680;
+        }
+
+        .notification-dismiss {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+
+        .reminder-icon {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            z-index: 999;
+            transition: all 0.3s ease;
+        }
+
+        .reminder-icon:hover {
+            transform: scale(1.1);
+            box-shadow: var(--shadow-lg);
+        }
+
     </style>
 </head>
 <body>
@@ -1340,14 +1421,30 @@
         </div>
     </div>
 
-    <!-- Disable service worker: unregister old ones and clear caches -->
+    <!-- Service Worker registration with cache busting -->
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(regs) {
-                regs.forEach(function(reg) { reg.unregister(); });
-            });
-            caches.keys().then(function(names) {
-                names.forEach(function(n) { caches.delete(n); });
+            window.addEventListener('load', function() {
+                // First clear old caches and unregister old workers
+                Promise.all([
+                    caches.keys().then(function(names) {
+                        return Promise.all(names.map(function(n) { 
+                            return caches.delete(n); 
+                        }));
+                    }),
+                    navigator.serviceWorker.getRegistrations().then(function(regs) {
+                        return Promise.all(regs.map(function(reg) { 
+                            return reg.unregister(); 
+                        }));
+                    })
+                ]).then(function() {
+                    // Now register fresh service worker
+                    return navigator.serviceWorker.register('./sw.js');
+                }).then(function(reg) {
+                    console.log('Service Worker registered:', reg.scope);
+                }).catch(function(err) {
+                    console.error('SW setup error:', err);
+                });
             });
         }
     </script>
@@ -2624,11 +2721,114 @@
         }
     </script>
 
+    <script>
+        // Notification System
+        function showNotificationBanner() {
+            const banner = document.getElementById('notification-banner');
+            const notificationPermission = localStorage.getItem('notificationPermission');
+            
+            // Show banner if user hasn't made a choice yet
+            if (!notificationPermission && 'Notification' in window) {
+                setTimeout(() => {
+                    banner.style.display = 'block';
+                }, 3000); // Show after 3 seconds
+            } else if (notificationPermission === 'granted') {
+                document.getElementById('reminder-icon').style.display = 'block';
+            }
+        }
+
+        function enableNotifications() {
+            if (!('Notification' in window)) {
+                alert('This browser does not support notifications');
+                return;
+            }
+
+            Notification.requestPermission().then(function(permission) {
+                if (permission === 'granted') {
+                    localStorage.setItem('notificationPermission', 'granted');
+                    document.getElementById('notification-banner').style.display = 'none';
+                    document.getElementById('reminder-icon').style.display = 'block';
+                    
+                    // Schedule daily reminder at 7 PM
+                    scheduleDailyReminder();
+                    
+                    // Show confirmation notification
+                    new Notification('🎉 Reminders Enabled!', {
+                        body: 'We\'ll remind you daily at 7 PM to practice your Tibetan flashcards.',
+                        icon: './icons/icon-192.png',
+                        badge: './icons/icon-192.png'
+                    });
+                } else {
+                    localStorage.setItem('notificationPermission', 'denied');
+                    document.getElementById('notification-banner').style.display = 'none';
+                }
+            });
+        }
+
+        function dismissNotificationBanner() {
+            localStorage.setItem('notificationPermission', 'dismissed');
+            document.getElementById('notification-banner').style.display = 'none';
+        }
+
+        function scheduleDailyReminder() {
+            // Calculate time until next 7 PM
+            const now = new Date();
+            const reminderTime = new Date();
+            reminderTime.setHours(19, 0, 0, 0); // 7 PM
+            
+            if (now > reminderTime) {
+                reminderTime.setDate(reminderTime.getDate() + 1);
+            }
+            
+            const msUntilReminder = reminderTime - now;
+            
+            // Set reminder
+            setTimeout(function() {
+                if (localStorage.getItem('notificationPermission') === 'granted') {
+                    new Notification('📚 Time to Practice!', {
+                        body: 'Practice your Tibetan flashcards for 5 minutes today!',
+                        icon: './icons/icon-192.png',
+                        badge: './icons/icon-192.png',
+                        requireInteraction: true
+                    });
+                    
+                    // Schedule next day's reminder
+                    scheduleDailyReminder();
+                }
+            }, msUntilReminder);
+            
+            console.log('Next reminder scheduled for:', reminderTime.toLocaleString());
+        }
+
+        // Initialize notification system on page load
+        window.addEventListener('load', function() {
+            showNotificationBanner();
+            
+            // If already granted permission, start scheduling
+            if (localStorage.getItem('notificationPermission') === 'granted') {
+                scheduleDailyReminder();
+            }
+        });
+    </script>
+
+
     <!-- PWA Install Banner -->
     <div class="pwa-install-banner" id="pwa-install-banner">
         <p>Install Lhasa Verbs on your device for quick access</p>
         <button class="pwa-install-btn" onclick="pwaInstall()">Install App</button>
         <button class="pwa-dismiss-btn" onclick="pwaDismiss()">Not Now</button>
     </div>
+
+    <!-- Notification Banner -->
+    <div class="notification-banner" id="notification-banner" style="display: none;">
+        <h3>📚 Get Daily Reminders</h3>
+        <p>Stay on track with your Tibetan learning! We'll send you friendly reminders to practice your flashcards.</p>
+        <button class="notification-allow" onclick="enableNotifications()">Enable Reminders</button>
+        <button class="notification-dismiss" onclick="dismissNotificationBanner()">Not Now</button>
+    </div>
+
+    <!-- Reminder Icon (shows after enabling) -->
+    <button class="reminder-icon" id="reminder-icon" style="display: none;" onclick="alert('Reminders are active! We\'ll notify you daily at 7 PM.')" title="Reminder settings">🔔</button>
+
 </body>
 </html>
