@@ -1291,6 +1291,108 @@
             box-shadow: var(--shadow-lg);
         }
 
+    
+        /* Settings Modal */
+        .settings-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-modal.active {
+            display: flex;
+        }
+
+        .settings-content {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .settings-header h2 {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 1.4rem;
+        }
+
+        .close-settings {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 0.25rem;
+        }
+
+        .settings-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .settings-section h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        .time-picker {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+        }
+
+        .time-picker input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid var(--bg-tertiary);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .save-settings-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.05rem;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #3d7680;
+            transition: all 0.3s ease;
+        }
+
+        .save-settings-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 #3d7680;
+        }
+
+        .save-settings-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #3d7680;
+        }
+
     </style>
 </head>
 <body>
@@ -2749,12 +2851,20 @@
                     document.getElementById('notification-banner').style.display = 'none';
                     document.getElementById('reminder-icon').style.display = 'block';
                     
-                    // Schedule daily reminder at 7 PM
+                    // Schedule daily reminder
                     scheduleDailyReminder();
                     
                     // Show confirmation notification
+                    const savedTime = localStorage.getItem('reminderTime') || '19:00';
+                    const [hours, minutes] = savedTime.split(':');
+                    const timeStr = new Date(2000, 0, 1, hours, minutes).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                    
                     new Notification('🎉 Reminders Enabled!', {
-                        body: 'We\'ll remind you daily at 7 PM to practice your Tibetan flashcards.',
+                        body: 'We\'ll remind you daily at ' + timeStr + ' to practice your Tibetan flashcards.',
                         icon: './icons/icon-192.png',
                         badge: './icons/icon-192.png'
                     });
@@ -2771,10 +2881,13 @@
         }
 
         function scheduleDailyReminder() {
-            // Calculate time until next 7 PM
+            // Get custom reminder time from localStorage (default 7 PM)
+            const savedTime = localStorage.getItem('reminderTime') || '19:00';
+            const [hours, minutes] = savedTime.split(':').map(Number);
+            
             const now = new Date();
             const reminderTime = new Date();
-            reminderTime.setHours(19, 0, 0, 0); // 7 PM
+            reminderTime.setHours(hours, minutes, 0, 0);
             
             if (now > reminderTime) {
                 reminderTime.setDate(reminderTime.getDate() + 1);
@@ -2782,8 +2895,13 @@
             
             const msUntilReminder = reminderTime - now;
             
+            // Clear any existing reminder timeout
+            if (window.reminderTimeout) {
+                clearTimeout(window.reminderTimeout);
+            }
+            
             // Set reminder
-            setTimeout(function() {
+            window.reminderTimeout = setTimeout(function() {
                 if (localStorage.getItem('notificationPermission') === 'granted') {
                     new Notification('📚 Time to Practice!', {
                         body: 'Practice your Tibetan flashcards for 5 minutes today!',
@@ -2799,6 +2917,55 @@
             
             console.log('Next reminder scheduled for:', reminderTime.toLocaleString());
         }
+
+        // Settings Modal Functions
+        function openSettings() {
+            const modal = document.getElementById('settings-modal');
+            const timeInput = document.getElementById('reminder-time');
+            
+            // Load saved time
+            const savedTime = localStorage.getItem('reminderTime') || '19:00';
+            timeInput.value = savedTime;
+            
+            modal.classList.add('active');
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-modal').classList.remove('active');
+        }
+
+        function saveSettings() {
+            const timeInput = document.getElementById('reminder-time');
+            const newTime = timeInput.value;
+            
+            // Save to localStorage
+            localStorage.setItem('reminderTime', newTime);
+            
+            // Reschedule with new time
+            if (localStorage.getItem('notificationPermission') === 'granted') {
+                scheduleDailyReminder();
+                
+                // Show confirmation
+                const [hours, minutes] = newTime.split(':');
+                const timeStr = new Date(2000, 0, 1, hours, minutes).toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+                
+                alert('✓ Reminder time updated to ' + timeStr);
+            }
+            
+            closeSettings();
+        }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function(e) {
+            const modal = document.getElementById('settings-modal');
+            if (e.target === modal) {
+                closeSettings();
+            }
+        });
 
         // Initialize notification system on page load
         window.addEventListener('load', function() {
@@ -2825,10 +2992,33 @@
         <p>Stay on track with your Tibetan learning! We'll send you friendly reminders to practice your flashcards.</p>
         <button class="notification-allow" onclick="enableNotifications()">Enable Reminders</button>
         <button class="notification-dismiss" onclick="dismissNotificationBanner()">Not Now</button>
+    
+
+    <!-- Settings Modal -->
+    <div class="settings-modal" id="settings-modal">
+        <div class="settings-content">
+            <div class="settings-header">
+                <h2>⚙️ Notification Settings</h2>
+                <button class="close-settings" onclick="closeSettings()">×</button>
+            </div>
+            <div class="settings-section">
+                <h3>Daily Reminder Time</h3>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+                    Choose when you'd like to be reminded to practice your flashcards
+                </p>
+                <div class="time-picker">
+                    <span>🕐</span>
+                    <input type="time" id="reminder-time" value="19:00">
+                </div>
+            </div>
+            <button class="save-settings-btn" onclick="saveSettings()">Save Settings</button>
+        </div>
     </div>
 
+</div>
+
     <!-- Reminder Icon (shows after enabling) -->
-    <button class="reminder-icon" id="reminder-icon" style="display: none;" onclick="alert('Reminders are active! We\'ll notify you daily at 7 PM.')" title="Reminder settings">🔔</button>
+    <button class="reminder-icon" id="reminder-icon" style="display: none;" onclick="openSettings()" title="Notification settings">🔔</button>
 
 </body>
 </html>
