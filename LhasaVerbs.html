@@ -836,7 +836,7 @@
             display: flex;
             gap: 1rem;
             justify-content: center;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             margin-top: 1rem;
         }
 
@@ -1508,17 +1508,17 @@
                         </div>
                     </div>
 
-                    <!-- Assessment buttons on top -->
-                    <div class="assessment-buttons" id="assessment-buttons" style="display: none;">
-                        <button class="btn-correct" id="btn-correct">Got It ✓</button>
-                        <button class="btn-needs-practice" id="btn-needs-practice">Needs Practice</button>
-                    </div>
-
-                    <!-- Navigation controls below -->
+                    <!-- Navigation controls -->
                     <div class="flashcard-controls">
                         <button class="control-button" id="prev-btn">← Previous</button>
                         <button class="control-button primary" id="flip-btn">Flip</button>
                         <button class="control-button" id="next-btn">Next →</button>
+                    </div>
+
+                    <!-- Assessment buttons below -->
+                    <div class="assessment-buttons" id="assessment-buttons" style="display: none;">
+                        <button class="btn-correct" id="btn-correct">Got It ✓</button>
+                        <button class="btn-needs-practice" id="btn-needs-practice">Needs Practice</button>
                     </div>
 
                     <div id="session-summary" style="display: none;">
@@ -2759,7 +2759,16 @@
             
             // Stop any playing audio
             stopAudio();
-            
+
+            // Reset flashcard session state
+            flashcardSession = null;
+            currentCardIndex = 0;
+            cardAssessments.clear();
+            isCardFlipped = false;
+            document.querySelector('.flashcard-settings').style.display = 'grid';
+            document.getElementById('flashcard-session').style.display = 'none';
+            document.getElementById('session-summary').style.display = 'none';
+
             // Reinitialize for new dataset
             initializeDictionary();
             initializeFlashcards();
