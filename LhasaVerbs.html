@@ -2009,7 +2009,7 @@
         }
 
         function playColloquialAudio(wordId, speed, btn) {
-            const audioPath = `Learning tools from Damien/colloquial/wordlists/recordings/sentence_${wordId}_${speed}.mp3`;
+            const audioPath = `Learning%20tools%20from%20Damien/colloquial/wordlists/recordings/sentence_${wordId}_${speed}.mp3`;
             playAudio(audioPath, btn);
         }
 
@@ -2195,10 +2195,10 @@
 
         function initializeFlashcardsColloquial() {
             if (!COLLOQUIAL_DATA) return;
-            const categories = [...new Set(COLLOQUIAL_DATA.words.map(w => w.category))].sort();
+            const themes = [...new Set(COLLOQUIAL_DATA.words.map(w => w.theme1).filter(Boolean))].sort();
             const categorySelect = document.getElementById('category-filter');
-            categorySelect.innerHTML = '<option value="">All Categories</option>' +
-                categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+            categorySelect.innerHTML = '<option value="">All Topics</option>' +
+                themes.map(t => `<option value="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</option>`).join('');
         }
 
         function initializeFlashcardsClassical() {
@@ -2255,7 +2255,7 @@
 
             let sessionWords = [...COLLOQUIAL_DATA.words];
             if (categoryFilter) {
-                sessionWords = sessionWords.filter(w => w.category === categoryFilter);
+                sessionWords = sessionWords.filter(w => w.theme1 === categoryFilter);
             }
 
             // Shuffle
