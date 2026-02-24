@@ -2453,7 +2453,7 @@
             document.getElementById('flashcard-front').innerHTML = `
                 <div class="flashcard-tibetan">${word.tibetan}</div>
                 ${frontAudioHtml}
-                <div class="flashcard-tap-hint">Tap card to reveal English</div>
+                <div class="flashcard-tap-hint">Tap card to reveal meaning</div>
             `;
 
             // --- BACK: English + category + sentence ---
@@ -2467,16 +2467,16 @@
 
             document.getElementById('flashcard-back').innerHTML = `
                 <div class="flashcard-back-section">
-                    <div class="flashcard-back-label">English</div>
-                    <div class="flashcard-english">${word.english}</div>
+                    <div class="flashcard-back-label">Meaning</div>
+                    <div class="flashcard-back-english">${word.english}</div>
                 </div>
+                ${sentenceHtml}
                 <div class="flashcard-back-section">
-                    <div class="flashcard-back-label">Category</div>
+                    <div class="flashcard-back-label">Type</div>
                     <div style="color: var(--text-secondary); font-size: 0.9rem;">
                         ${word.category}${word.theme1 ? ' · ' + word.theme1 : ''}
                     </div>
                 </div>
-                ${sentenceHtml}
             `;
 
             // Apply flip state
@@ -2514,16 +2514,16 @@
 
             document.getElementById('flashcard-back').innerHTML = `
                 <div class="flashcard-back-section">
-                    <div class="flashcard-back-label">Definition</div>
+                    <div class="flashcard-back-label">Meaning</div>
                     <div class="flashcard-back-english">${entry.english}</div>
                 </div>
+                ${notesHtml}
                 <div class="flashcard-back-section">
-                    <div class="flashcard-back-label">Topic</div>
+                    <div class="flashcard-back-label">Type</div>
                     <div style="color: var(--text-secondary); font-size: 0.9rem;">
                         ${entry.subtopic}
                     </div>
                 </div>
-                ${notesHtml}
             `;
 
             // Apply flip state
