@@ -881,62 +881,99 @@
 
         .assessment-buttons {
             display: flex;
-            gap: 1rem;
+            gap: 0.6rem;
             justify-content: center;
             margin-top: 1.5rem;
             margin-bottom: 1rem;
+            flex-wrap: wrap;
         }
 
-        .btn-correct {
-            padding: 1rem 2.5rem;
-            background-color: var(--accent-primary);
+        /* Shared base for all 4 FSRS rating buttons */
+        .btn-again, .btn-hard, .btn-good, .btn-easy,
+        .btn-correct, .btn-needs-practice {
+            padding: 0.75rem 1.1rem;
+            min-width: 72px;
             color: white;
             border: none;
             border-radius: 16px;
             cursor: pointer;
             font-weight: 800;
-            font-size: 1.05rem;
+            font-size: 0.85rem;
+            line-height: 1.3;
+            text-align: center;
             transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 5px 0 #3d7680;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
+        }
+        .btn-again small, .btn-hard small, .btn-good small, .btn-easy small {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            opacity: 0.85;
+            text-transform: none;
+            letter-spacing: 0;
         }
 
-        .btn-correct:hover {
+        /* Again — red */
+        .btn-again, .btn-needs-practice {
+            background-color: var(--accent-red);
+            box-shadow: 0 5px 0 #d93232;
+        }
+        .btn-again:hover, .btn-needs-practice:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 0 #d93232;
+        }
+        .btn-again:active, .btn-needs-practice:active {
+            transform: translateY(2px);
+            box-shadow: 0 3px 0 #d93232;
+        }
+
+        /* Hard — amber */
+        .btn-hard {
+            background-color: #f59e0b;
+            box-shadow: 0 5px 0 #b45309;
+        }
+        .btn-hard:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 0 #b45309;
+        }
+        .btn-hard:active {
+            transform: translateY(2px);
+            box-shadow: 0 3px 0 #b45309;
+        }
+
+        /* Good — teal (default) */
+        .btn-good, .btn-correct {
             background-color: var(--accent-primary);
+            box-shadow: 0 5px 0 #3d7680;
+        }
+        .btn-good:hover, .btn-correct:hover {
             transform: translateY(-3px) scale(1.05);
             box-shadow: 0 8px 0 #3d7680;
         }
-
-        .btn-correct:active {
+        .btn-good:active, .btn-correct:active {
             transform: translateY(2px);
             box-shadow: 0 3px 0 #3d7680;
         }
 
-        .btn-needs-practice {
-            padding: 1rem 2.5rem;
-            background-color: var(--accent-red);
-            color: white;
-            border: none;
-            border-radius: 16px;
-            cursor: pointer;
-            font-weight: 800;
-            font-size: 1.05rem;
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 5px 0 #d93232;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        /* Easy — gold */
+        .btn-easy {
+            background-color: #16a34a;
+            box-shadow: 0 5px 0 #166534;
         }
-
-        .btn-needs-practice:hover {
-            background-color: var(--accent-red);
+        .btn-easy:hover {
             transform: translateY(-3px) scale(1.05);
-            box-shadow: 0 8px 0 #d93232;
+            box-shadow: 0 8px 0 #166534;
+        }
+        .btn-easy:active {
+            transform: translateY(2px);
+            box-shadow: 0 3px 0 #166534;
         }
 
-        .btn-needs-practice:active {
-            transform: translateY(2px);
-            box-shadow: 0 3px 0 #d93232;
+        /* Due badge in dictionary */
+        .progress-badge.due {
+            background: #fff7ed;
+            color: #c2410c;
         }
 
         .summary {
@@ -1109,9 +1146,12 @@
                 font-size: 1rem;
             }
 
+            #btn-again, #btn-hard, #btn-good, #btn-easy,
             #btn-correct, #btn-needs-practice {
                 min-height: 48px;
-                padding: 0.75rem 1.5rem;
+                padding: 0.65rem 0.9rem;
+                min-width: 60px;
+                font-size: 0.8rem;
             }
 
             .start-session-btn {
@@ -1479,6 +1519,7 @@
             <div class="learning-stats" id="learning-stats">
                 <div class="ls-item">✓ Learned: <span class="ls-num" id="stat-learned">0</span></div>
                 <div class="ls-item">↻ Practice: <span class="ls-num" id="stat-practice">0</span></div>
+                <div class="ls-item">📅 Due: <span class="ls-num" id="stat-due">0</span></div>
                 <div class="ls-item" style="flex:1; min-width:100px; gap:0.5rem;">
                     <div class="ls-bar-wrap"><div class="ls-bar-fill" id="stat-bar-fill" style="width:0%"></div></div>
                     <span id="stat-percent" style="color:white; font-size:0.85rem; font-weight:700;">0%</span>
@@ -1555,6 +1596,9 @@
                 </div>
 
                 <button class="start-session-btn" id="start-session-btn">Start Flashcard Session</button>
+                <button class="start-session-btn" id="start-due-btn" style="background:#ffc800; color:#3c3c3c; box-shadow: 0 4px 0 #b8960a; margin-top:0.5rem;">
+                    Review Due Cards &nbsp;<span id="due-count-badge" style="background:rgba(0,0,0,0.15); border-radius:12px; padding:0.1rem 0.5rem; font-size:0.9rem;">(0)</span>
+                </button>
             </div>
 
             <div id="flashcard-session" style="display: none;">
@@ -1578,21 +1622,24 @@
                         <button class="control-button" id="next-btn">Next →</button>
                     </div>
 
-                    <!-- Assessment buttons below -->
+                    <!-- FSRS Assessment buttons (shown after flip) -->
                     <div class="assessment-buttons" id="assessment-buttons" style="display: none;">
-                        <button class="btn-correct" id="btn-correct">Got It ✓</button>
-                        <button class="btn-needs-practice" id="btn-needs-practice">Needs Practice</button>
+                        <button class="btn-again" id="btn-again">Again<small id="hint-again"></small></button>
+                        <button class="btn-hard"  id="btn-hard">Hard<small id="hint-hard"></small></button>
+                        <button class="btn-good"  id="btn-good">Good<small id="hint-good"></small></button>
+                        <button class="btn-easy"  id="btn-easy">Easy<small id="hint-easy"></small></button>
                     </div>
 
                     <div id="session-summary" style="display: none;">
                         <div class="summary">
                             <h2>Session Complete!</h2>
                             <div class="summary-stat correct">
-                                <span id="correct-count">0</span> Got It
+                                <span id="correct-count">0</span> Learned
                             </div>
                             <div class="summary-stat needs-practice">
-                                <span id="needs-practice-count">0</span> Needs Practice
+                                <span id="needs-practice-count">0</span> Again
                             </div>
+                            <div id="srs-next-reviews" style="margin-top:1rem; font-size:0.82rem; color:#555; text-align:left; max-height:180px; overflow-y:auto;"></div>
                             <button class="start-session-btn" style="margin-top: 1.5rem;" onclick="exitFlashcardSession()">Back to Settings</button>
                         </div>
                     </div>
@@ -1707,25 +1754,116 @@
         let isCardFlipped = false;
 
         // ============================================
-        // Learning Progress Tracking (localStorage)
+        // Learning Progress + FSRS-4.5 Spaced Repetition
         // ============================================
         const PROGRESS_KEY = 'tibetan_learning_progress';
 
+        // -- FSRS-4.5 default weights (published defaults) --
+        const FSRS_W = [0.4072,1.1829,3.1262,15.4722, 7.2102,0.5316,1.0651,0.0589,
+                        1.4845,0.1407,0.9898, 1.9685, 0.1100,0.2900,2.2700,0.1500,2.9898];
+        const FSRS_DECAY  = -0.5;
+        const FSRS_FACTOR = 19 / 81;
+
+        function _clampD(d) { return Math.min(10, Math.max(1, d)); }
+
+        function fsrsInitDifficulty(rating) {
+            return _clampD(FSRS_W[4] - Math.exp(FSRS_W[5] * (rating - 1)) + 1);
+        }
+        function fsrsInitStability(rating) {
+            return Math.max(0.1, FSRS_W[rating - 1]);
+        }
+        function fsrsNextDifficulty(d, rating) {
+            const nd = d - FSRS_W[6] * (rating - 3);
+            return _clampD(nd + FSRS_W[7] * (FSRS_W[4] - nd));   // mean-reversion
+        }
+        function fsrsRetrievability(s, elapsedDays) {
+            return s > 0 ? Math.pow(1 + FSRS_FACTOR * elapsedDays / s, FSRS_DECAY) : 0;
+        }
+        function fsrsRecallStability(d, s, r, rating) {
+            const hard = rating === 2 ? FSRS_W[15] : 1;
+            const easy = rating === 4 ? FSRS_W[16] : 1;
+            return s * (Math.exp(FSRS_W[8]) * (11 - d) *
+                        Math.pow(s, -FSRS_W[9]) *
+                        (Math.exp((1 - r) * FSRS_W[10]) - 1) *
+                        hard * easy) + 1;
+        }
+        function fsrsForgetStability(d, s, r) {
+            return FSRS_W[11] * Math.pow(d, -FSRS_W[12]) *
+                   (Math.pow(s + 1, FSRS_W[13]) - 1) *
+                   Math.exp((1 - r) * FSRS_W[14]);
+        }
+        function fsrsInterval(stability) { return Math.max(1, Math.round(stability)); }
+
+        // Compute next SRS state. card = existing srs object or null (new card).
+        // rating: 1=Again 2=Hard 3=Good 4=Easy
+        function fsrsNextState(card, rating) {
+            const now = Date.now();
+            if (!card || card.state === 'new') {
+                const d = fsrsInitDifficulty(rating);
+                let s = fsrsInitStability(rating);
+                let state = 'review', interval;
+                if (rating === 1) { state = 'learning'; interval = 1; s = fsrsInitStability(3); }
+                else { interval = fsrsInterval(s); }
+                return { difficulty: d, stability: s, state, reps: 1, lapses: 0,
+                         interval, dueDate: now + interval * 86400000 };
+            }
+            const reviewedAt = card.dueDate - card.interval * 86400000;
+            const elapsed    = Math.max(0, (now - reviewedAt) / 86400000);
+            const r = fsrsRetrievability(card.stability, elapsed);
+            let { difficulty, stability, state, reps, lapses } = card;
+
+            if (rating === 1) {
+                stability  = Math.max(fsrsForgetStability(difficulty, stability, r), 0.1);
+                difficulty = fsrsNextDifficulty(difficulty, rating);
+                state      = state === 'review' ? 'relearning' : 'learning';
+                lapses     = (lapses || 0) + 1;
+                reps       = 0;
+                const interval = 1;
+                return { difficulty, stability, state, reps, lapses,
+                         interval, dueDate: now + 86400000 };
+            }
+            stability  = Math.max(fsrsRecallStability(difficulty, stability, r, rating), 0.1);
+            difficulty = fsrsNextDifficulty(difficulty, rating);
+            state      = 'review';
+            reps       = (reps || 0) + 1;
+            const interval = fsrsInterval(stability);
+            return { difficulty, stability, state, reps, lapses: lapses || 0,
+                     interval, dueDate: now + interval * 86400000 };
+        }
+
+        // Return {1,2,3,4} → interval (days) preview without saving
+        function fsrsPreviewIntervals(currentSrs) {
+            const out = {};
+            [1, 2, 3, 4].forEach(r => { out[r] = fsrsNextState(currentSrs, r).interval; });
+            return out;
+        }
+
+        function formatInterval(days) {
+            if (days <= 1) return '1d';
+            if (days < 30) return days + 'd';
+            if (days < 365) return Math.round(days / 30) + 'mo';
+            return +(days / 365).toFixed(1) + 'yr';
+        }
+
+        // -- Progress storage --
         function getProgressData() {
             try { return JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}'); }
             catch(e) { return {}; }
         }
 
-        function saveProgressEntry(verbId, result) {
+        // rating: 1=Again 2=Hard 3=Good 4=Easy
+        function saveProgressEntry(verbId, rating) {
             const data = getProgressData();
             if (!data[currentDataset]) data[currentDataset] = {};
             const prev = data[currentDataset][String(verbId)] || { gotIt: 0, practice: 0, status: 'seen' };
-            if (result === 'correct') {
-                prev.gotIt = (prev.gotIt || 0) + 1;
-                prev.status = 'learned';
-            } else {
+            const newSrs = fsrsNextState(prev.srs || null, rating);
+            prev.srs = newSrs;
+            if (rating === 1) {
                 prev.practice = (prev.practice || 0) + 1;
                 if (prev.status !== 'learned') prev.status = 'needs_practice';
+            } else {
+                prev.gotIt = (prev.gotIt || 0) + 1;
+                prev.status = 'learned';
             }
             prev.lastSeen = Date.now();
             data[currentDataset][String(verbId)] = prev;
@@ -1736,18 +1874,31 @@
         function getVerbStatus(verbId) {
             const data = getProgressData();
             const entry = (data[currentDataset] || {})[String(verbId)];
-            return entry ? entry.status : null;
+            if (!entry) return null;
+            // 'due' takes priority when it's time to review again
+            if (entry.srs && entry.srs.dueDate <= Date.now()) return 'due';
+            return entry.status;
+        }
+
+        function fsrsDueIds() {
+            const data = getProgressData();
+            const dp = data[currentDataset] || {};
+            const now = Date.now();
+            return Object.entries(dp)
+                .filter(([, e]) => e.srs && e.srs.dueDate <= now)
+                .map(([id]) => parseInt(id));
         }
 
         function updateProgressStats() {
             const data = getProgressData();
-            const dp = data[currentDataset] || {};
+            const dp   = data[currentDataset] || {};
             const vals = Object.values(dp);
-            const learnedCount   = vals.filter(e => e.status === 'learned').length;
-            const practiceCount  = vals.filter(e => e.status === 'needs_practice').length;
-            const totalCount = currentDataset === 'lhasa'      ? VERB_DATA.length
-                             : currentDataset === 'colloquial'  ? (COLLOQUIAL_DATA ? COLLOQUIAL_DATA.length : 0)
-                             : currentDataset === 'classical'   ? (CLASSICAL_DATA  ? CLASSICAL_DATA.length  : 0)
+            const learnedCount  = vals.filter(e => e.status === 'learned').length;
+            const practiceCount = vals.filter(e => e.status === 'needs_practice').length;
+            const dueCount      = vals.filter(e => e.srs && e.srs.dueDate <= Date.now()).length;
+            const totalCount = currentDataset === 'lhasa'     ? VERB_DATA.length
+                             : currentDataset === 'colloquial' ? (COLLOQUIAL_DATA ? COLLOQUIAL_DATA.length : 0)
+                             : currentDataset === 'classical'  ? (CLASSICAL_DATA  ? CLASSICAL_DATA.length  : 0)
                              : 0;
             const pct = totalCount > 0 ? Math.round((learnedCount / totalCount) * 100) : 0;
             const statsEl = document.getElementById('learning-stats');
@@ -1755,11 +1906,15 @@
                 statsEl.style.display = 'flex';
                 document.getElementById('stat-learned').textContent  = learnedCount;
                 document.getElementById('stat-practice').textContent = practiceCount;
+                document.getElementById('stat-due').textContent      = dueCount;
                 document.getElementById('stat-percent').textContent  = pct + '%';
                 document.getElementById('stat-bar-fill').style.width = pct + '%';
             } else {
                 statsEl.style.display = 'none';
             }
+            // Update the "Review Due" button badge
+            const badge = document.getElementById('due-count-badge');
+            if (badge) badge.textContent = dueCount > 0 ? '(' + dueCount + ')' : '(0)';
         }
 
         // ============================================
@@ -2080,7 +2235,8 @@
             if (currentDataset === 'lhasa') {
                 container.innerHTML = filteredVerbs.map(verb => {
                     const st = getVerbStatus(verb.refId);
-                    const badge = st === 'learned'        ? '<span class="progress-badge learned">✓ Learned</span>'
+                    const badge = st === 'due'          ? '<span class="progress-badge due">📅 Due</span>'
+                                : st === 'learned'      ? '<span class="progress-badge learned">✓ Learned</span>'
                                 : st === 'needs_practice' ? '<span class="progress-badge needs-practice">↻ Practice</span>'
                                 : '';
                     return `<div class="verb-card ${selectedVerbId === verb.refId ? 'selected' : ''}" data-id="${verb.refId}">
@@ -2095,7 +2251,8 @@
             } else if (currentDataset === 'colloquial') {
                 container.innerHTML = filteredVerbs.map(word => {
                     const st = getVerbStatus(word.id);
-                    const badge = st === 'learned'        ? '<span class="progress-badge learned">✓ Learned</span>'
+                    const badge = st === 'due'          ? '<span class="progress-badge due">📅 Due</span>'
+                                : st === 'learned'      ? '<span class="progress-badge learned">✓ Learned</span>'
                                 : st === 'needs_practice' ? '<span class="progress-badge needs-practice">↻ Practice</span>'
                                 : '';
                     return `<div class="verb-card ${selectedVerbId === word.id ? 'selected' : ''}" data-id="${word.id}">
@@ -2111,7 +2268,8 @@
             } else if (currentDataset === 'classical') {
                 container.innerHTML = filteredVerbs.map(entry => {
                     const st = getVerbStatus(entry.id);
-                    const badge = st === 'learned'        ? '<span class="progress-badge learned">✓ Learned</span>'
+                    const badge = st === 'due'          ? '<span class="progress-badge due">📅 Due</span>'
+                                : st === 'learned'      ? '<span class="progress-badge learned">✓ Learned</span>'
                                 : st === 'needs_practice' ? '<span class="progress-badge needs-practice">↻ Practice</span>'
                                 : '';
                     return `<div class="verb-card ${selectedVerbId === entry.id ? 'selected' : ''}" data-id="${entry.id}">
@@ -2675,6 +2833,24 @@
             document.getElementById('prev-btn').disabled = currentCardIndex === 0;
             document.getElementById('next-btn').disabled =
                 currentCardIndex === flashcardSession.verbs.length - 1 && !isCardFlipped;
+
+            // Show FSRS interval hints on each button
+            if (isCardFlipped && flashcardSession) {
+                const verb = flashcardSession.verbs[currentCardIndex];
+                const verbId = verb.refId || verb.id;
+                const data = getProgressData();
+                const currentSrs = ((data[currentDataset] || {})[String(verbId)] || {}).srs || null;
+                const preview = fsrsPreviewIntervals(currentSrs);
+                document.getElementById('hint-again').textContent = formatInterval(preview[1]);
+                document.getElementById('hint-hard').textContent  = formatInterval(preview[2]);
+                document.getElementById('hint-good').textContent  = formatInterval(preview[3]);
+                document.getElementById('hint-easy').textContent  = formatInterval(preview[4]);
+            } else {
+                ['again','hard','good','easy'].forEach(id => {
+                    const el = document.getElementById('hint-' + id);
+                    if (el) el.textContent = '';
+                });
+            }
         }
 
         function flipCard() {
@@ -2687,24 +2863,23 @@
             updateFlashcardButtons();
         }
 
-        function markCorrect() {
-            const verb = flashcardSession.verbs[currentCardIndex];
+        // FSRS rating handlers
+        function _markRating(rating) {
+            const verb   = flashcardSession.verbs[currentCardIndex];
             const verbId = verb.refId || verb.id;
-            cardAssessments.set(verbId, 'correct');
-            saveProgressEntry(verbId, 'correct');
+            cardAssessments.set(verbId, rating);
+            saveProgressEntry(verbId, rating);
+            if (rating === 1) {
+                // Again — requeue at end of session
+                flashcardSession.verbs.push(verb);
+                document.getElementById('total-cards').textContent = flashcardSession.verbs.length;
+            }
             nextCard();
         }
-
-        function markNeedsPractice() {
-            const verb = flashcardSession.verbs[currentCardIndex];
-            const verbId = verb.refId || verb.id;
-            cardAssessments.set(verbId, 'needs_practice');
-            saveProgressEntry(verbId, 'needs_practice');
-            // Add card back to end of deck for review
-            flashcardSession.verbs.push(verb);
-            document.getElementById('total-cards').textContent = flashcardSession.verbs.length;
-            nextCard();
-        }
+        function markAgain() { _markRating(1); }
+        function markHard()  { _markRating(2); }
+        function markGood()  { _markRating(3); }
+        function markEasy()  { _markRating(4); }
 
         function prevCard() {
             if (currentCardIndex > 0) {
@@ -2727,19 +2902,75 @@
         }
 
         function showSessionSummary() {
-            const correctCount = Array.from(cardAssessments.values()).filter(v => v === 'correct').length;
-            const needsPracticeCount = Array.from(cardAssessments.values()).filter(v => v === 'needs_practice').length;
+            const ratings      = Array.from(cardAssessments.values());
+            const learnedCount = ratings.filter(r => r >= 2).length;
+            const againCount   = ratings.filter(r => r === 1).length;
+            document.getElementById('correct-count').textContent = learnedCount;
+            document.getElementById('needs-practice-count').textContent = againCount;
 
-            document.getElementById('correct-count').textContent = correctCount;
-            document.getElementById('needs-practice-count').textContent = needsPracticeCount;
+            // Build "next review" list from saved SRS data
+            const dp = (getProgressData()[currentDataset] || {});
+            const reviewLines = [];
+            cardAssessments.forEach((rating, verbId) => {
+                const entry = dp[String(verbId)];
+                if (!entry || !entry.srs) return;
+                let gloss = String(verbId);
+                if (currentDataset === 'lhasa') {
+                    const v = VERB_DATA.find(x => x.refId === verbId);
+                    if (v) gloss = v.englishGloss[0].substring(0, 45);
+                } else if (currentDataset === 'colloquial' && COLLOQUIAL_DATA) {
+                    const w = COLLOQUIAL_DATA.find(x => x.id === verbId);
+                    if (w) gloss = (w.english || '').substring(0, 45);
+                } else if (currentDataset === 'classical' && CLASSICAL_DATA) {
+                    const e = CLASSICAL_DATA.find(x => x.id === verbId);
+                    if (e) gloss = (e.english || '').substring(0, 45);
+                }
+                const col = rating===1 ? '#ef4444' : rating===2 ? '#f59e0b' : rating===3 ? '#5097A4' : '#16a34a';
+                reviewLines.push(`<div style="padding:0.2rem 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;gap:0.5rem;">
+                    <span style="color:#333;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${gloss}</span>
+                    <span style="color:${col};font-weight:700;white-space:nowrap;">→ ${formatInterval(entry.srs.interval)}</span></div>`);
+            });
+            const reviewsEl = document.getElementById('srs-next-reviews');
+            if (reviewsEl) {
+                reviewsEl.innerHTML = reviewLines.length
+                    ? '<div style="font-weight:700;margin-bottom:0.4rem;color:#555;">Next reviews:</div>' + reviewLines.join('')
+                    : '';
+            }
 
             document.getElementById('flashcard').style.display = 'none';
             document.querySelector('.flashcard-controls').style.display = 'none';
             document.getElementById('assessment-buttons').style.display = 'none';
             document.querySelector('.progress-text').style.display = 'none';
             document.querySelector('.progress-bar').style.display = 'none';
-
             document.getElementById('session-summary').style.display = 'block';
+            updateProgressStats();
+        }
+
+        function startDueCardsSession() {
+            const dueIds = fsrsDueIds();
+            if (dueIds.length === 0) {
+                alert('No cards due right now — great work! Check back later.');
+                return;
+            }
+            let sessionVerbs = [];
+            if (currentDataset === 'lhasa') {
+                sessionVerbs = VERB_DATA.filter(v => dueIds.includes(v.refId));
+            } else if (currentDataset === 'colloquial' && COLLOQUIAL_DATA) {
+                sessionVerbs = COLLOQUIAL_DATA.filter(w => dueIds.includes(w.id));
+            } else if (currentDataset === 'classical' && CLASSICAL_DATA) {
+                sessionVerbs = CLASSICAL_DATA.filter(e => dueIds.includes(e.id));
+            }
+            for (let i = sessionVerbs.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [sessionVerbs[i], sessionVerbs[j]] = [sessionVerbs[j], sessionVerbs[i]];
+            }
+            flashcardSession = { verbs: sessionVerbs };
+            cardAssessments.clear();
+            currentCardIndex = 0;
+            isCardFlipped = false;
+            document.querySelector('.flashcard-settings').style.display = 'none';
+            document.getElementById('flashcard-session').style.display = 'block';
+            renderFlashcard();
         }
 
         function exitFlashcardSession() {
@@ -2938,11 +3169,14 @@
         // ============================================
         document.getElementById('search-input').addEventListener('input', debouncedSearch);
         document.getElementById('start-session-btn').addEventListener('click', startFlashcardSession);
+        document.getElementById('start-due-btn').addEventListener('click', startDueCardsSession);
         document.getElementById('flip-btn').addEventListener('click', flipCard);
         document.getElementById('prev-btn').addEventListener('click', prevCard);
         document.getElementById('next-btn').addEventListener('click', nextCard);
-        document.getElementById('btn-correct').addEventListener('click', markCorrect);
-        document.getElementById('btn-needs-practice').addEventListener('click', markNeedsPractice);
+        document.getElementById('btn-again').addEventListener('click', markAgain);
+        document.getElementById('btn-hard').addEventListener('click', markHard);
+        document.getElementById('btn-good').addEventListener('click', markGood);
+        document.getElementById('btn-easy').addEventListener('click', markEasy);
 
         // ============================================
         // Initialization
