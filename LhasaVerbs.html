@@ -65,6 +65,31 @@
         .header-content {
             max-width: 1400px;
             margin: 0 auto;
+            position: relative;
+        }
+
+        .direction-toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: rgba(255,255,255,0.18);
+            border: 2px solid rgba(255,255,255,0.4);
+            color: white;
+            border-radius: 20px;
+            padding: 0.4rem 0.9rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+            white-space: nowrap;
+            letter-spacing: 0.3px;
+        }
+        .direction-toggle:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .direction-toggle.eng-mode {
+            background: rgba(255,200,0,0.22);
+            border-color: rgba(255,200,0,0.7);
         }
 
         h1 {
@@ -1525,6 +1550,8 @@
                     <span id="stat-percent" style="color:white; font-size:0.85rem; font-weight:700;">0%</span>
                 </div>
             </div>
+            <!-- Flashcard direction toggle (top-right) -->
+            <button class="direction-toggle" id="direction-toggle" title="Switch flashcard direction">🔤 Tib → Eng</button>
         </div>
     </header>
 
@@ -1752,6 +1779,21 @@
         let currentCardIndex = 0;
         let cardAssessments = new Map();
         let isCardFlipped = false;
+        let flashcardDirection = 'tib-to-eng'; // 'tib-to-eng' | 'eng-to-tib'
+
+        function toggleFlashcardDirection() {
+            flashcardDirection = flashcardDirection === 'tib-to-eng' ? 'eng-to-tib' : 'tib-to-eng';
+            const btn = document.getElementById('direction-toggle');
+            if (flashcardDirection === 'eng-to-tib') {
+                btn.textContent = '🔤 Eng → Tib';
+                btn.classList.add('eng-mode');
+            } else {
+                btn.textContent = '🔤 Tib → Eng';
+                btn.classList.remove('eng-mode');
+            }
+            // Re-render the current card if a session is active
+            if (flashcardSession) renderFlashcard();
+        }
 
         // ============================================
         // Learning Progress + FSRS-4.5 Spaced Repetition
@@ -2634,11 +2676,9 @@
             } else {
                 frontAudioOnclick = `event.stopPropagation(); playAudio('${tibAudioPath}', this)`;
             }
-            document.getElementById('flashcard-front').innerHTML = `
+            const tibFront = `
                 <div class="flashcard-tibetan">${verb.verb}</div>
-                <button class="flashcard-audio-btn" onclick="${frontAudioOnclick}">
-                    &#9654; Listen
-                </button>
+                <button class="flashcard-audio-btn" onclick="${frontAudioOnclick}">&#9654; Listen</button>
                 <div class="flashcard-tap-hint">Tap card to reveal meaning</div>
             `;
 
@@ -2646,6 +2686,15 @@
             const definitions = verb.englishGloss
                 .map((g, i) => `${verb.englishGloss.length > 1 ? (i+1) + ') ' : ''}${g}`)
                 .join('<br>');
+
+            const engFront = `
+                <div class="flashcard-back-english" style="font-size:1.25rem; line-height:1.5;">${definitions}</div>
+                <div style="color:var(--text-secondary); font-size:0.85rem; margin-top:0.6rem;">${verb.argumentType} · ${verb.volitionality}</div>
+                <div class="flashcard-tap-hint">Tap card to reveal Tibetan</div>
+            `;
+
+            document.getElementById('flashcard-front').innerHTML =
+                flashcardDirection === 'eng-to-tib' ? engFront : tibFront;
 
             let tensesHtml = '';
             if (verb.tenses.past || verb.tenses.future || verb.tenses.imperative) {
@@ -2695,25 +2744,37 @@
             }
 
             const engAudioPath = getAudioPath(verb.refId, 'english');
-            document.getElementById('flashcard-back').innerHTML = `
-                <div class="flashcard-back-section">
-                    <div class="flashcard-back-label">Meaning</div>
-                    <div class="flashcard-back-english">${definitions}</div>
-                </div>
-                <div class="flashcard-back-section">
-                    <div class="flashcard-back-label">Type</div>
-                    <div style="color: var(--text-secondary); font-size: 0.9rem;">
-                        ${verb.argumentType} · ${verb.volitionality} · ${verb.languageLevel}
+            const tibAudioBtn = `<button class="flashcard-back-audio-btn" data-label="Tibetan" onclick="event.stopPropagation(); ${verbTimings && verbTimings.verb ? `playAudioSegment('${tibAudioPath}', ${verbTimings.verb.tibStart}, ${verbTimings.verb.tibEnd}, this)` : `playAudio('${tibAudioPath}', this)`}">&#9654; Tibetan</button>`;
+            const engAudioBtn = `<button class="flashcard-back-audio-btn" data-label="English" onclick="event.stopPropagation(); playAudio('${engAudioPath}', this)">&#9654; English</button>`;
+
+            if (flashcardDirection === 'eng-to-tib') {
+                document.getElementById('flashcard-back').innerHTML = `
+                    <div class="flashcard-back-section">
+                        <div class="flashcard-back-label">Tibetan</div>
+                        <div class="flashcard-tibetan" style="font-size:1.8rem;">${verb.verb}</div>
                     </div>
-                </div>
-                ${tensesHtml}
-                ${examplesHtml}
-                ${notesHtml}
-                <div class="flashcard-back-audio">
-                    <button class="flashcard-back-audio-btn" data-label="Tibetan" onclick="event.stopPropagation(); ${verbTimings && verbTimings.verb ? `playAudioSegment('${tibAudioPath}', ${verbTimings.verb.tibStart}, ${verbTimings.verb.tibEnd}, this)` : `playAudio('${tibAudioPath}', this)`}">&#9654; Tibetan</button>
-                    <button class="flashcard-back-audio-btn" data-label="English" onclick="event.stopPropagation(); playAudio('${engAudioPath}', this)">&#9654; English</button>
-                </div>
-            `;
+                    ${tensesHtml}
+                    ${examplesHtml}
+                    <div class="flashcard-back-audio">${tibAudioBtn}${engAudioBtn}</div>
+                `;
+            } else {
+                document.getElementById('flashcard-back').innerHTML = `
+                    <div class="flashcard-back-section">
+                        <div class="flashcard-back-label">Meaning</div>
+                        <div class="flashcard-back-english">${definitions}</div>
+                    </div>
+                    <div class="flashcard-back-section">
+                        <div class="flashcard-back-label">Type</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">
+                            ${verb.argumentType} · ${verb.volitionality} · ${verb.languageLevel}
+                        </div>
+                    </div>
+                    ${tensesHtml}
+                    ${examplesHtml}
+                    ${notesHtml}
+                    <div class="flashcard-back-audio">${tibAudioBtn}${engAudioBtn}</div>
+                `;
+            }
 
             // Apply flip state
             const flashcardEl = document.getElementById('flashcard');
@@ -2742,12 +2803,6 @@
                 </div>
             ` : '';
 
-            document.getElementById('flashcard-front').innerHTML = `
-                <div class="flashcard-tibetan">${word.tibetan}</div>
-                ${frontAudioHtml}
-                <div class="flashcard-tap-hint">Tap card to reveal meaning</div>
-            `;
-
             // --- BACK: English + category + sentence ---
             const sentenceHtml = word.sentence ? `
                 <div class="flashcard-back-section">
@@ -2757,19 +2812,43 @@
                 </div>
             ` : '';
 
-            document.getElementById('flashcard-back').innerHTML = `
-                <div class="flashcard-back-section">
-                    <div class="flashcard-back-label">Meaning</div>
-                    <div class="flashcard-back-english">${word.english}</div>
-                </div>
-                ${sentenceHtml}
-                <div class="flashcard-back-section">
-                    <div class="flashcard-back-label">Type</div>
-                    <div style="color: var(--text-secondary); font-size: 0.9rem;">
-                        ${word.category}${word.theme1 ? ' · ' + word.theme1 : ''}
+            if (flashcardDirection === 'eng-to-tib') {
+                document.getElementById('flashcard-front').innerHTML = `
+                    <div class="flashcard-back-english" style="font-size:1.25rem;">${word.english}</div>
+                    <div style="color:var(--text-secondary); font-size:0.85rem; margin-top:0.5rem;">${word.category}${word.theme1 ? ' · ' + word.theme1 : ''}</div>
+                    <div class="flashcard-tap-hint">Tap card to reveal Tibetan</div>
+                `;
+                document.getElementById('flashcard-back').innerHTML = `
+                    <div class="flashcard-back-section">
+                        <div class="flashcard-back-label">Tibetan</div>
+                        <div class="flashcard-tibetan" style="font-size:1.8rem;">${word.tibetan}</div>
                     </div>
-                </div>
-            `;
+                    ${sentenceHtml}
+                    ${word.hasAudio ? `<div class="flashcard-back-audio">
+                        <button class="flashcard-back-audio-btn" data-label="Slow" onclick="event.stopPropagation(); playColloquialAudio(${word.id}, 'slow', this)">▶ Slow</button>
+                        <button class="flashcard-back-audio-btn" data-label="Fast" onclick="event.stopPropagation(); playColloquialAudio(${word.id}, 'fast', this)">▶ Fast</button>
+                    </div>` : ''}
+                `;
+            } else {
+                document.getElementById('flashcard-front').innerHTML = `
+                    <div class="flashcard-tibetan">${word.tibetan}</div>
+                    ${frontAudioHtml}
+                    <div class="flashcard-tap-hint">Tap card to reveal meaning</div>
+                `;
+                document.getElementById('flashcard-back').innerHTML = `
+                    <div class="flashcard-back-section">
+                        <div class="flashcard-back-label">Meaning</div>
+                        <div class="flashcard-back-english">${word.english}</div>
+                    </div>
+                    ${sentenceHtml}
+                    <div class="flashcard-back-section">
+                        <div class="flashcard-back-label">Type</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">
+                            ${word.category}${word.theme1 ? ' · ' + word.theme1 : ''}
+                        </div>
+                    </div>
+                `;
+            }
 
             // Apply flip state
             const flashcardEl = document.getElementById('flashcard');
@@ -2790,13 +2869,7 @@
             document.getElementById('progress-fill').style.width =
                 `${((currentCardIndex + 1) / flashcardSession.verbs.length) * 100}%`;
 
-            // --- FRONT: Tibetan term (recognition practice) ---
-            document.getElementById('flashcard-front').innerHTML = `
-                <div class="flashcard-tibetan">${entry.tibetan}</div>
-                <div class="flashcard-tap-hint">Tap card to reveal meaning</div>
-            `;
-
-            // --- BACK: English definition + notes ---
+            // --- FRONT/BACK: direction-aware ---
             const notesHtml = entry.notes ? `
                 <div class="flashcard-back-section">
                     <div class="flashcard-back-label">Notes</div>
@@ -2804,19 +2877,36 @@
                 </div>
             ` : '';
 
-            document.getElementById('flashcard-back').innerHTML = `
-                <div class="flashcard-back-section">
-                    <div class="flashcard-back-label">Meaning</div>
-                    <div class="flashcard-back-english">${entry.english}</div>
-                </div>
-                ${notesHtml}
-                <div class="flashcard-back-section">
-                    <div class="flashcard-back-label">Type</div>
-                    <div style="color: var(--text-secondary); font-size: 0.9rem;">
-                        ${entry.subtopic}
+            if (flashcardDirection === 'eng-to-tib') {
+                document.getElementById('flashcard-front').innerHTML = `
+                    <div class="flashcard-back-english" style="font-size:1.15rem; line-height:1.5;">${entry.english}</div>
+                    <div style="color:var(--text-secondary); font-size:0.85rem; margin-top:0.5rem;">${entry.subtopic}</div>
+                    <div class="flashcard-tap-hint">Tap card to reveal Tibetan</div>
+                `;
+                document.getElementById('flashcard-back').innerHTML = `
+                    <div class="flashcard-back-section">
+                        <div class="flashcard-back-label">Tibetan</div>
+                        <div class="flashcard-tibetan" style="font-size:1.8rem;">${entry.tibetan}</div>
                     </div>
-                </div>
-            `;
+                    ${notesHtml}
+                `;
+            } else {
+                document.getElementById('flashcard-front').innerHTML = `
+                    <div class="flashcard-tibetan">${entry.tibetan}</div>
+                    <div class="flashcard-tap-hint">Tap card to reveal meaning</div>
+                `;
+                document.getElementById('flashcard-back').innerHTML = `
+                    <div class="flashcard-back-section">
+                        <div class="flashcard-back-label">Meaning</div>
+                        <div class="flashcard-back-english">${entry.english}</div>
+                    </div>
+                    ${notesHtml}
+                    <div class="flashcard-back-section">
+                        <div class="flashcard-back-label">Type</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">${entry.subtopic}</div>
+                    </div>
+                `;
+            }
 
             // Apply flip state
             const flashcardEl = document.getElementById('flashcard');
@@ -3167,6 +3257,7 @@
         // ============================================
         // Event Listeners
         // ============================================
+        document.getElementById('direction-toggle').addEventListener('click', toggleFlashcardDirection);
         document.getElementById('search-input').addEventListener('input', debouncedSearch);
         document.getElementById('start-session-btn').addEventListener('click', startFlashcardSession);
         document.getElementById('start-due-btn').addEventListener('click', startDueCardsSession);
