@@ -1406,6 +1406,60 @@
             box-shadow: 0 2px 0 #3d7680;
         }
 
+        /* ── Learning progress ── */
+        .progress-badge {
+            display: inline-block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 0.12rem 0.4rem;
+            border-radius: 20px;
+            margin-top: 0.3rem;
+            letter-spacing: 0.2px;
+        }
+        .progress-badge.learned {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        .progress-badge.needs-practice {
+            background: #fef9c3;
+            color: #b45309;
+        }
+        .learning-stats {
+            display: none;
+            align-items: center;
+            gap: 1.25rem;
+            background: rgba(255,255,255,0.18);
+            border-radius: 12px;
+            padding: 0.55rem 1rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .ls-item {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            color: white;
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+        .ls-num {
+            font-size: 1.05rem;
+            font-weight: 800;
+        }
+        .ls-bar-wrap {
+            flex: 1;
+            min-width: 80px;
+            height: 7px;
+            background: rgba(255,255,255,0.25);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .ls-bar-fill {
+            height: 100%;
+            background: #4ade80;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
     </style>
 </head>
 <body>
@@ -1420,6 +1474,15 @@
             <div class="mode-tabs">
                 <button class="tab-button active" data-mode="dictionary">Dictionary</button>
                 <button class="tab-button" data-mode="flashcard">Flashcards</button>
+            </div>
+            <!-- Learning progress bar (shown once any word is studied) -->
+            <div class="learning-stats" id="learning-stats">
+                <div class="ls-item">✓ Learned: <span class="ls-num" id="stat-learned">0</span></div>
+                <div class="ls-item">↻ Practice: <span class="ls-num" id="stat-practice">0</span></div>
+                <div class="ls-item" style="flex:1; min-width:100px; gap:0.5rem;">
+                    <div class="ls-bar-wrap"><div class="ls-bar-fill" id="stat-bar-fill" style="width:0%"></div></div>
+                    <span id="stat-percent" style="color:white; font-size:0.85rem; font-weight:700;">0%</span>
+                </div>
             </div>
         </div>
     </header>
@@ -1642,6 +1705,62 @@
         let currentCardIndex = 0;
         let cardAssessments = new Map();
         let isCardFlipped = false;
+
+        // ============================================
+        // Learning Progress Tracking (localStorage)
+        // ============================================
+        const PROGRESS_KEY = 'tibetan_learning_progress';
+
+        function getProgressData() {
+            try { return JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}'); }
+            catch(e) { return {}; }
+        }
+
+        function saveProgressEntry(verbId, result) {
+            const data = getProgressData();
+            if (!data[currentDataset]) data[currentDataset] = {};
+            const prev = data[currentDataset][String(verbId)] || { gotIt: 0, practice: 0, status: 'seen' };
+            if (result === 'correct') {
+                prev.gotIt = (prev.gotIt || 0) + 1;
+                prev.status = 'learned';
+            } else {
+                prev.practice = (prev.practice || 0) + 1;
+                if (prev.status !== 'learned') prev.status = 'needs_practice';
+            }
+            prev.lastSeen = Date.now();
+            data[currentDataset][String(verbId)] = prev;
+            localStorage.setItem(PROGRESS_KEY, JSON.stringify(data));
+            updateProgressStats();
+        }
+
+        function getVerbStatus(verbId) {
+            const data = getProgressData();
+            const entry = (data[currentDataset] || {})[String(verbId)];
+            return entry ? entry.status : null;
+        }
+
+        function updateProgressStats() {
+            const data = getProgressData();
+            const dp = data[currentDataset] || {};
+            const vals = Object.values(dp);
+            const learnedCount   = vals.filter(e => e.status === 'learned').length;
+            const practiceCount  = vals.filter(e => e.status === 'needs_practice').length;
+            const totalCount = currentDataset === 'lhasa'      ? VERB_DATA.length
+                             : currentDataset === 'colloquial'  ? (COLLOQUIAL_DATA ? COLLOQUIAL_DATA.length : 0)
+                             : currentDataset === 'classical'   ? (CLASSICAL_DATA  ? CLASSICAL_DATA.length  : 0)
+                             : 0;
+            const pct = totalCount > 0 ? Math.round((learnedCount / totalCount) * 100) : 0;
+            const statsEl = document.getElementById('learning-stats');
+            if (learnedCount + practiceCount > 0) {
+                statsEl.style.display = 'flex';
+                document.getElementById('stat-learned').textContent  = learnedCount;
+                document.getElementById('stat-practice').textContent = practiceCount;
+                document.getElementById('stat-percent').textContent  = pct + '%';
+                document.getElementById('stat-bar-fill').style.width = pct + '%';
+            } else {
+                statsEl.style.display = 'none';
+            }
+        }
 
         // ============================================
         // Utility Functions
@@ -1959,33 +2078,48 @@
             }
 
             if (currentDataset === 'lhasa') {
-                container.innerHTML = filteredVerbs.map(verb => `
-                    <div class="verb-card ${selectedVerbId === verb.refId ? 'selected' : ''}" data-id="${verb.refId}">
+                container.innerHTML = filteredVerbs.map(verb => {
+                    const st = getVerbStatus(verb.refId);
+                    const badge = st === 'learned'        ? '<span class="progress-badge learned">✓ Learned</span>'
+                                : st === 'needs_practice' ? '<span class="progress-badge needs-practice">↻ Practice</span>'
+                                : '';
+                    return `<div class="verb-card ${selectedVerbId === verb.refId ? 'selected' : ''}" data-id="${verb.refId}">
                         <div class="verb-card-tibetan">${verb.verb}</div>
                         <div class="verb-card-english">${verb.englishGloss[0]}</div>
-                    </div>
-                `).join('');
+                        ${badge}
+                    </div>`;
+                }).join('');
                 container.querySelectorAll('.verb-card').forEach(card => {
                     card.addEventListener('click', () => selectVerb(parseInt(card.dataset.id)));
                 });
             } else if (currentDataset === 'colloquial') {
-                container.innerHTML = filteredVerbs.map(word => `
-                    <div class="verb-card ${selectedVerbId === word.id ? 'selected' : ''}" data-id="${word.id}">
+                container.innerHTML = filteredVerbs.map(word => {
+                    const st = getVerbStatus(word.id);
+                    const badge = st === 'learned'        ? '<span class="progress-badge learned">✓ Learned</span>'
+                                : st === 'needs_practice' ? '<span class="progress-badge needs-practice">↻ Practice</span>'
+                                : '';
+                    return `<div class="verb-card ${selectedVerbId === word.id ? 'selected' : ''}" data-id="${word.id}">
                         <div class="verb-card-tibetan">${word.tibetan}</div>
                         <div class="verb-card-english">${word.english}</div>
                         <span class="category-tag" style="font-size: 0.75rem; margin-top: 0.25rem;">${word.category}</span>
-                    </div>
-                `).join('');
+                        ${badge}
+                    </div>`;
+                }).join('');
                 container.querySelectorAll('.verb-card').forEach(card => {
                     card.addEventListener('click', () => selectVerb(parseInt(card.dataset.id)));
                 });
             } else if (currentDataset === 'classical') {
-                container.innerHTML = filteredVerbs.map(entry => `
-                    <div class="verb-card ${selectedVerbId === entry.id ? 'selected' : ''}" data-id="${entry.id}">
+                container.innerHTML = filteredVerbs.map(entry => {
+                    const st = getVerbStatus(entry.id);
+                    const badge = st === 'learned'        ? '<span class="progress-badge learned">✓ Learned</span>'
+                                : st === 'needs_practice' ? '<span class="progress-badge needs-practice">↻ Practice</span>'
+                                : '';
+                    return `<div class="verb-card ${selectedVerbId === entry.id ? 'selected' : ''}" data-id="${entry.id}">
                         <div class="verb-card-tibetan">${entry.tibetan}</div>
                         <div class="verb-card-english">${entry.english.length > 100 ? entry.english.substring(0, 100) + '...' : entry.english}</div>
-                    </div>
-                `).join('');
+                        ${badge}
+                    </div>`;
+                }).join('');
                 container.querySelectorAll('.verb-card').forEach(card => {
                     card.addEventListener('click', () => selectVerb(parseInt(card.dataset.id)));
                 });
@@ -2557,6 +2691,7 @@
             const verb = flashcardSession.verbs[currentCardIndex];
             const verbId = verb.refId || verb.id;
             cardAssessments.set(verbId, 'correct');
+            saveProgressEntry(verbId, 'correct');
             nextCard();
         }
 
@@ -2564,6 +2699,7 @@
             const verb = flashcardSession.verbs[currentCardIndex];
             const verbId = verb.refId || verb.id;
             cardAssessments.set(verbId, 'needs_practice');
+            saveProgressEntry(verbId, 'needs_practice');
             // Add card back to end of deck for review
             flashcardSession.verbs.push(verb);
             document.getElementById('total-cards').textContent = flashcardSession.verbs.length;
@@ -2772,6 +2908,7 @@
             // Reinitialize for new dataset
             initializeDictionary();
             initializeFlashcards();
+            updateProgressStats();
         }
 
                 // ============================================
@@ -2813,6 +2950,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             initializeDictionary();
             initializeFlashcards();
+            updateProgressStats();
         });
 
         // ============================================
