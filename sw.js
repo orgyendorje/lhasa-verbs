@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lhasa-verbs-v4';
+const CACHE_NAME = 'lhasa-verbs-v5';
 const AUDIO_CACHE = 'lhasa-verbs-audio-v4';
 
 // Core files to precache (the app shell)
